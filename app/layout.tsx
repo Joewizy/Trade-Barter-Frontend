@@ -4,6 +4,8 @@ import { Josefin_Sans as FontSans } from "next/font/google"
 import { cn } from "@/lib/utils"
 import "./globals.css"
 import WalletProviderWrapper from "@/components/WalletProvider"
+import { Toaster } from "@/components/ui/toaster"
+
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -26,6 +28,7 @@ export default function RootLayout({
         <WalletProviderWrapper>
           {children}
         </WalletProviderWrapper>
+        <Toaster />
       </body>
     </html>
   )

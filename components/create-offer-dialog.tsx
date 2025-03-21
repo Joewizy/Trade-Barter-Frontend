@@ -25,11 +25,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Plus } from "lucide-react"
+import { LoaderCircleIcon, Plus } from "lucide-react"
 import { useWallet } from '@suiet/wallet-kit'
-import callCreateOffer from "@/lib/calls"
+import { useToast } from "@/hooks/use-toast"
+import { callCreateOffer } from "@/lib/calls"
+import { useGlobalState } from "@/hooks/use-global-state"
+
+import { currency_codes, payment_methods } from "@/data/globals"
+import CreateProfileForm from "./create-profile-form"
 
 const formSchema = z.object({
   price: z.number().positive({ message: "Must be greater than zero" }),
@@ -40,7 +43,10 @@ const formSchema = z.object({
 
 export function CreateOfferDialog() {
   const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const wallet = useWallet()
+  const { toast } = useToast()
+  const { profileCreated } = useGlobalState()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,17 +59,35 @@ export function CreateOfferDialog() {
   })
 
   // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!wallet.connected) return;
-    // Do something with the form values.
-    callCreateOffer(amount, 'NGN', wallet);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!wallet.connected) {
+      toast({
+        title: "Error!",
+        description: "Please connect your wallet first!",
+        variant: "destructive",
+      })
+      return;
+    }
 
-    // Close the dialog
-    setOpen(false)
+    setIsLoading(true);
+    let res = await callCreateOffer(values, wallet);
 
-    // Reset form
-    // ✅ This will be type-safe and validated.
-    console.log(values)
+    if (res.result === true) {
+      toast({
+        title: "Success!",
+        description: "Order has been created",
+      })
+      setOpen(false)
+      setIsLoading(false)
+      form.reset();
+    } else {
+      toast({
+        title: "Error!",
+        description: res.result,
+        variant: "destructive",
+      })
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -75,95 +99,112 @@ export function CreateOfferDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Create New Offer</DialogTitle>
-              <DialogDescription>Set up your offer details. Click save when you're done.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem >
-                    <FormLabel>Price ({form.getValues("currency_code")})</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. 3000" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is the rate you want to sell your sui for the selected currency.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem >
-                    <FormLabel>Amount (SUI)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. 300" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is the amount of SUI you want to lock.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem >
-                    <FormLabel>Amount (SUI)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. 300" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is the amount of SUI you want to lock.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem >
-                    <FormLabel>Amount (SUI)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. 300" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      This is the amount of SUI you want to lock.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {profileCreated ?
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <DialogHeader>
+                <DialogTitle>Create New Offer</DialogTitle>
+                <DialogDescription>Set up your offer details. Click save when you're done.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem >
+                      <FormLabel>Price ({form.watch("currency_code")})</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g. 3000" {...field} onChange={(event) => field.onChange(Number(event.target.value))} />
+                      </FormControl>
+                      <FormDescription>
+                        This is the rate you want to sell your sui for the selected currency.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem >
+                      <FormLabel>Amount (SUI)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g. 300" {...field} onChange={(event) => field.onChange(Number(event.target.value))} />
+                      </FormControl>
+                      <FormDescription>
+                        This is the amount of SUI you want to lock in offer.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Currency</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Offer Currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {currency_codes.map((item, i) => <SelectItem key={i} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the currency with which you will be receiving payments with.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payment_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Payment Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Payment Type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {payment_methods.map((item, i) => <SelectItem key={i} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the method with which you will be receiving payments with.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
 
 
 
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                type="submit"
-                className="bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30"
-              >
-                Publish Offer
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              </div>
+              <DialogFooter>
+                <Button
+                  disabled={isLoading}
+                  variant="outline"
+                  type="submit"
+                  className="bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30 hover:bg-primary hover:text-black"
+                >
+                  {isLoading ? <LoaderCircleIcon className="animate-spin" /> : "Publish Offer"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form> :
+          <CreateProfileForm />
+        }
       </DialogContent>
     </Dialog >
   )
 }
-
