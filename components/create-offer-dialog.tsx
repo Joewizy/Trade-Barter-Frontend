@@ -1,6 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,168 +14,156 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus } from "lucide-react"
+import { useWallet } from '@suiet/wallet-kit'
+import callCreateOffer from "@/lib/calls"
+
+const formSchema = z.object({
+  price: z.number().positive({ message: "Must be greater than zero" }),
+  amount: z.number().positive({ message: "Must be greater than zero" }),
+  currency_code: z.string().nonempty(),
+  payment_type: z.string().nonempty(),
+})
 
 export function CreateOfferDialog() {
   const [open, setOpen] = useState(false)
-  const [offerType, setOfferType] = useState("buy")
-  const [price, setPrice] = useState("")
-  const [amount, setAmount] = useState("")
-  const [minAmount, setMinAmount] = useState("")
-  const [maxAmount, setMaxAmount] = useState("")
-  const [paymentMethods, setPaymentMethods] = useState({
-    "Bank Transfer": false,
-    "Credit Card": false,
-    PayPal: false,
-    Venmo: false,
+  const wallet = useWallet()
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      price: 0,
+      amount: 0,
+      currency_code: "NGN",
+      payment_type: "Bank Transfer"
+    },
   })
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // Here you would normally submit the form data to your backend
-    console.log({
-      offerType,
-      price,
-      amount,
-      minAmount,
-      maxAmount,
-      paymentMethods: Object.keys(paymentMethods).filter((key) => paymentMethods[key]),
-    })
+  // 2. Define a submit handler.
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!wallet.connected) return;
+    // Do something with the form values.
+    callCreateOffer(amount, 'NGN', wallet);
 
     // Close the dialog
     setOpen(false)
 
     // Reset form
-    setOfferType("buy")
-    setPrice("")
-    setAmount("")
-    setMinAmount("")
-    setMaxAmount("")
-    setPaymentMethods({
-      "Bank Transfer": false,
-      "Credit Card": false,
-      PayPal: false,
-      Venmo: false,
-    })
+    // ✅ This will be type-safe and validated.
+    console.log(values)
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-blue/90 hover:to-neon-purple/90">
+        <Button className="bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30 hover:text-black">
           <Plus className="mr-2 h-4 w-4" />
           Create Offer
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Offer</DialogTitle>
-            <DialogDescription>Set up your offer details. Click save when you're done.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="offerType" className="text-right">
-                Offer Type
-              </Label>
-              <Select value={offerType} onValueChange={setOfferType}>
-                <SelectTrigger id="offerType" className="col-span-3">
-                  <SelectValue placeholder="Select offer type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buy">I want to buy SUI</SelectItem>
-                  <SelectItem value="sell">I want to sell SUI</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">
-                Price (USD)
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                placeholder="e.g. 35000"
-                className="col-span-3"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>Create New Offer</DialogTitle>
+              <DialogDescription>Set up your offer details. Click save when you're done.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem >
+                    <FormLabel>Price ({form.getValues("currency_code")})</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. 3000" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      This is the rate you want to sell your sui for the selected currency.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount (SUI)
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="e.g. 1000"
-                className="col-span-3"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem >
+                    <FormLabel>Amount (SUI)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. 300" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      This is the amount of SUI you want to lock.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="minAmount" className="text-right">
-                Min Amount ($)
-              </Label>
-              <Input
-                id="minAmount"
-                type="number"
-                placeholder="e.g. 100"
-                className="col-span-3"
-                value={minAmount}
-                onChange={(e) => setMinAmount(e.target.value)}
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem >
+                    <FormLabel>Amount (SUI)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. 300" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      This is the amount of SUI you want to lock.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="maxAmount" className="text-right">
-                Max Amount ($)
-              </Label>
-              <Input
-                id="maxAmount"
-                type="number"
-                placeholder="e.g. 1000"
-                className="col-span-3"
-                value={maxAmount}
-                onChange={(e) => setMaxAmount(e.target.value)}
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem >
+                    <FormLabel>Amount (SUI)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. 300" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      This is the amount of SUI you want to lock.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+
+
+
+
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Payment Methods</Label>
-              <div className="col-span-3 space-y-2">
-                {Object.keys(paymentMethods).map((method) => (
-                  <div key={method} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={method}
-                      checked={paymentMethods[method]}
-                      onCheckedChange={(checked) => {
-                        setPaymentMethods({
-                          ...paymentMethods,
-                          [method]: checked,
-                        })
-                      }}
-                    />
-                    <Label htmlFor={method}>{method}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-neon-blue to-neon-purple hover:from-neon-blue/90 hover:to-neon-purple/90"
-            >
-              Publish Offer
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                type="submit"
+                className="bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30"
+              >
+                Publish Offer
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }
 

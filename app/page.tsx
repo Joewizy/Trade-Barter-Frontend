@@ -22,18 +22,17 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-row gap-2">
-                  <Link href="/swap">
-                    <Button className="bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90">
-                      Start Swapping
+                  <Link href="/marketplace">
+                    <Button
+                      className="bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
+                    >
+                      Trade P2P
                       <ArrowDownUp className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/marketplace">
-                    <Button
-                      variant="outline"
-                      className="border-cetus-border bg-cetus-dark hover:bg-cetus-dark/80 hover:border-cetus-primary/50"
-                    >
-                      Trade P2P
+                  <Link href="/swap">
+                    <Button variant="outline" className="border-cetus-border bg-cetus-dark hover:bg-cetus-dark/80 hover:border-cetus-primary/50">
+                      Start Learning
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
