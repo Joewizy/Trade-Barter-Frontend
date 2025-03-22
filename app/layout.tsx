@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import "./globals.css"
 import WalletProviderWrapper from "@/components/WalletProvider"
 import { Toaster } from "@/components/ui/toaster"
+import { GlobalProvider } from "@/context/global-context"
 
 
 const fontSans = FontSans({
@@ -26,7 +27,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn("min-h-screen bg-background dark", fontSans.className)}>
         <WalletProviderWrapper>
-          {children}
+          <GlobalProvider>
+            {children}
+          </GlobalProvider>
         </WalletProviderWrapper>
         <Toaster />
       </body>

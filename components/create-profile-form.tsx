@@ -19,7 +19,7 @@ import { ArrowRight, LoaderCircleIcon } from "lucide-react"
 import { useWallet } from "@suiet/wallet-kit"
 import { useToast } from "@/hooks/use-toast"
 import { createProfile } from "@/lib/calls"
-import { useGlobalState } from "@/hooks/use-global-state"
+import { useGlobalContext } from "@/context/global-context"
 
 const FormSchema = z.object({
   username: z.string().min(2, {
@@ -33,7 +33,7 @@ const CreateProfileForm = () => {
   const wallet = useWallet()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const { setProfileCreated } = useGlobalState()
+  const { setProfileCreated } = useGlobalContext()
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -77,7 +77,7 @@ const CreateProfileForm = () => {
       <p className='text-lg font-bold'>Create Profile</p>
       <p className='mt-2'>To create an order, you need to have a profile created first!</p>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="w-2/3 space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="username"

@@ -1,28 +1,59 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search } from "lucide-react"
 import { CreateOfferDialog } from "@/components/create-offer-dialog"
 import { OfferCard } from "@/components/offer-card"
-import { useMockOffers } from "@/hooks/use-mock-offers"
 import { cn } from "@/lib/utils"
+import { useGlobalContext } from "@/context/global-context"
 
 export function MarketplaceContent() {
   const [activeTab, setActiveTab] = useState("buy")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCurrency, setSelectedCurrency] = useState("USD")
+  const [selectedCurrency, setSelectedCurrency] = useState("all")
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all")
+  const [processedOffers, setProcessedOffers] = useState([])
+  const { offers } = useGlobalContext()
 
-  const { mockOffers } = useMockOffers()
+  // Process the offers from the blockchain format to the format the OfferCard expects
+  useEffect(() => {
+    if (!offers) return
 
-  const filteredOffers = mockOffers.filter((offer) => {
+    const mappedOffers = offers.map(offer => {
+      
+      // Determine if this is a buy or sell offer
+      // We'll consider it a "buy" offer if the user wants to sell SUI (buyer receives SUI)
+      // And a "sell" offer if the user wants to buy SUI (seller gives SUI)
+      const type = "buy" // Default to buy, you may need logic to determine buy/sell
+      
+      return {
+        id: offer.objectId,
+        type: type,
+        merchant: {
+          name: offer.content.fields.owner || "Unknown User", // The owner address or name if available
+          completion: 98 // Default completion rate - you might want to fetch this from user profile
+        },
+        trades: 0, // Default value, you may want to fetch this from user profile
+        price: offer.content.fields.price,
+        amount: parseInt(offer.content.fields.locked_amount || 0) / 1_000_000_000, // Convert MIST to normal amount
+        minAmount: 0.0001, // Default, not in contract
+        maxAmount: parseInt(offer.content.fields.locked_amount || 1000) / 1_000_000_000, // Convert MIST to normal amount
+        currency: offer.content.fields.currency_code,
+        paymentMethods: [offer.content.fields.payment_type] // Convert single payment type to array
+      }
+    })
+
+    setProcessedOffers(mappedOffers)
+  }, [offers])
+
+  const filteredOffers = processedOffers.filter((offer) => {
     // Filter by tab (buy/sell)
     if (offer.type !== activeTab) return false
 
-    // Filter by search query (merchant name)
+    // Filter by search query (merchant name or address)
     if (searchQuery && !offer.merchant.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
 
     // Filter by currency
@@ -33,6 +64,14 @@ export function MarketplaceContent() {
 
     return true
   })
+
+  // Get unique currencies from offers for dropdown
+  const uniqueCurrencies = [...new Set(processedOffers.map(offer => offer.currency))]
+  
+  // Get unique payment methods from offers for dropdown
+  const uniquePaymentMethods = [...new Set(
+    processedOffers.flatMap(offer => offer.paymentMethods)
+  )]
 
   return (
     <div className="container py-8">
@@ -64,9 +103,9 @@ export function MarketplaceContent() {
                 </SelectTrigger>
                 <SelectContent className="bg-cetus-dark border-cetus-border">
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
+                  {uniqueCurrencies.map(currency => (
+                    <SelectItem key={currency} value={currency}>{currency}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -76,10 +115,9 @@ export function MarketplaceContent() {
                 </SelectTrigger>
                 <SelectContent className="bg-cetus-dark border-cetus-border">
                   <SelectItem value="all">All Methods</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
-                  <SelectItem value="PayPal">PayPal</SelectItem>
-                  <SelectItem value="Venmo">Venmo</SelectItem>
+                  {uniquePaymentMethods.map(method => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -109,7 +147,7 @@ export function MarketplaceContent() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="buy" className="mt-0">
+           
               <div className="grid gap-4">
                 {filteredOffers.length > 0 ? (
                   filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
@@ -119,7 +157,7 @@ export function MarketplaceContent() {
                   </div>
                 )}
               </div>
-            </TabsContent>
+           
 
             <TabsContent value="sell" className="mt-0">
               <div className="grid gap-4">
@@ -140,4 +178,3 @@ export function MarketplaceContent() {
 }
 
 export default MarketplaceContent
-

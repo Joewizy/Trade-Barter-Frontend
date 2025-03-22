@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -29,10 +29,10 @@ import { LoaderCircleIcon, Plus } from "lucide-react"
 import { useWallet } from '@suiet/wallet-kit'
 import { useToast } from "@/hooks/use-toast"
 import { callCreateOffer } from "@/lib/calls"
-import { useGlobalState } from "@/hooks/use-global-state"
 
 import { currency_codes, payment_methods } from "@/data/globals"
 import CreateProfileForm from "./create-profile-form"
+import { useGlobalContext } from "@/context/global-context"
 
 const formSchema = z.object({
   price: z.number().positive({ message: "Must be greater than zero" }),
@@ -46,7 +46,7 @@ export function CreateOfferDialog() {
   const [isLoading, setIsLoading] = useState(false)
   const wallet = useWallet()
   const { toast } = useToast()
-  const { profileCreated } = useGlobalState()
+  const { profileCreated } = useGlobalContext()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

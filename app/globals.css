@@ -72,7 +72,11 @@
   }
   body {
     @apply bg-cetus-darker text-foreground;
-    background-image: radial-gradient(circle at 50% 30%, rgba(0, 228, 255, 0.15) 0%, rgba(0, 0, 0, 0) 50%);
+    background-image: radial-gradient(
+      circle at 50% 30%,
+      rgba(0, 228, 255, 0.15) 0%,
+      rgba(0, 0, 0, 0) 50%
+    );
     background-size: 100% 100%;
     background-position: 0 0;
     background-attachment: fixed;
@@ -88,9 +92,15 @@
   .cetus-card::before {
     content: "";
     @apply absolute inset-0 rounded-xl opacity-20;
-    background: linear-gradient(120deg, transparent 20%, rgba(0, 228, 255, 0.3), transparent 80%);
+    background: linear-gradient(
+      120deg,
+      transparent 20%,
+      rgba(0, 228, 255, 0.3),
+      transparent 80%
+    );
     background-size: 200% 200%;
     animation: shimmer 3s linear infinite;
+    z-index: -1;
   }
 
   .cetus-input {
@@ -150,4 +160,3 @@
     text-shadow: 0 0 5px rgba(0, 228, 255, 0.8), 0 0 10px rgba(0, 228, 255, 0.5);
   }
 }
-

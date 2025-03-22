@@ -2,6 +2,10 @@ import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { WalletContextState } from "@suiet/wallet-kit";
 
+const client = new SuiClient({
+  url: getFullnodeUrl('testnet')
+});
+
 export async function callCreateOffer(values: {
   price: number,
   amount: number,
@@ -11,7 +15,7 @@ export async function callCreateOffer(values: {
   const tx = new Transaction();
   const packageObjectId = process.env.NEXT_PUBLIC_PACKAGE_ID;
   const amountInMist = values.amount * 1000000000;
-  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)])
+  const coin = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)])
 
   tx.setGasBudget(10000000);
 
@@ -22,7 +26,9 @@ export async function callCreateOffer(values: {
         tx.pure.string(values.currency_code),
         tx.pure.u64(values.price),
         tx.pure.string(values.payment_type),
-        coin,
+        coin[0],
+        tx.object(process.env.NEXT_PUBLIC_OFFER_REGISTRY_ID as string),
+        tx.object(process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string)
       ],
     });
     await wallet.signAndExecuteTransaction({
@@ -38,9 +44,6 @@ export async function callCreateOffer(values: {
 }
 
 export async function checkProfileExists(wallet: WalletContextState) {
-  const client = new SuiClient({
-    url: getFullnodeUrl('testnet')
-  });
 
   try {
     // Query the dynamic field for the wallet address in the profiles table
@@ -51,8 +54,8 @@ export async function checkProfileExists(wallet: WalletContextState) {
       }
     });
 
-    if (registryObject.data?.content?.fields?.profiles) {
-      const profilesTable = registryObject.data.content.fields.profiles;
+    if (registryObject.data?.content?.fields?.user_profiles) {
+      const profilesTable = registryObject.data.content.fields.user_profiles;
 
       // Check if the address exists in the table using dynamic field apis
       const dynamicFields = await client.getDynamicFields({
@@ -100,8 +103,54 @@ export async function createProfile(values: {
     console.log(error)
     return { result: error.message };
   }
+}
 
-
-
-
+export async function getAllOffers() {
+  // 1. Fetch the OfferRegistry object
+  const offerRegistry = await client.getObject({
+    id: process.env.NEXT_PUBLIC_OFFER_REGISTRY_ID as string,
+    options: { showContent: true }
+  });
+  
+  // 2. Get all entries in the user_offers table
+  if (!offerRegistry.data?.content?.fields?.user_offers?.fields?.id?.id) {
+    return [];
+  }
+  const tableId = offerRegistry.data.content.fields.user_offers.fields.id.id;
+  
+  // Get all table entries
+  const tableEntries = await client.getDynamicFields({
+    parentId: tableId
+  });
+  
+  // 3. For each address in the table, get their offers
+  const allOffers = [];
+  
+  for (const entry of tableEntries.data) {
+    const address = entry.name.value;
+    
+    // Get the vector of offer IDs for this address
+    const offerIdsObj = await client.getDynamicFieldObject({
+      parentId: tableId,
+      name: { type: 'address', value: address }
+    });
+    
+    if (!offerIdsObj.data?.content?.fields?.value) {
+      continue;
+    }
+    
+    const offerIds = offerIdsObj.data.content.fields.value;
+    
+    // 4. Fetch each offer object using its ID
+    for (const offerId of offerIds) {
+      const offer = await client.getObject({
+        id: offerId,
+        options: { showContent: true }
+      });
+      
+      allOffers.push(offer.data);
+    }
+  }
+  
+  return allOffers;
 }

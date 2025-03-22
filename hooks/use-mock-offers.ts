@@ -7,7 +7,7 @@ const initialMockOffers = [
   {
     id: "1",
     type: "buy",
-    price: 35000,
+    price: 2.5,
     currency: "USD",
     crypto: "SUI",
     amount: 1000,
@@ -24,7 +24,7 @@ const initialMockOffers = [
   {
     id: "2",
     type: "sell",
-    price: 34800,
+    price: 2.57,
     currency: "USD",
     crypto: "SUI",
     amount: 500,
@@ -41,7 +41,7 @@ const initialMockOffers = [
   {
     id: "3",
     type: "buy",
-    price: 34950,
+    price: 2.67,
     currency: "USD",
     crypto: "SUI",
     amount: 2000,
@@ -58,7 +58,7 @@ const initialMockOffers = [
   {
     id: "4",
     type: "sell",
-    price: 34750,
+    price: 2.89,
     currency: "USD",
     crypto: "SUI",
     amount: 750,

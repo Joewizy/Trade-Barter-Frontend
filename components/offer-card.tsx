@@ -1,11 +1,23 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, CreditCard, BanknoteIcon as Bank, Wallet } from "lucide-react"
+import Link from "next/link"
+import { Input } from "./ui/input"
 
 export function OfferCard({ offer }) {
+ const [amount, setAmount] = useState(0)
+ const [FiatAmount, setFiatAmount] = useState(0)
+
+  useEffect(() => {
+    setFiatAmount(amount * offer.price)
+  }
+  ,[amount])
+
+
   const paymentMethodIcons = {
     "Bank Transfer": <Bank className="h-4 w-4" />,
     "Credit Card": <CreditCard className="h-4 w-4" />,
@@ -14,7 +26,7 @@ export function OfferCard({ offer }) {
   }
 
   return (
-    <Card className="cetus-card overflow-hidden">
+    <Card className="cetus-card">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
@@ -39,7 +51,7 @@ export function OfferCard({ offer }) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Price</p>
-            <p className="text-lg font-semibold">${offer.price.toLocaleString()}</p>
+            <p className="text-lg font-semibold">{offer.currency} {offer.price.toLocaleString()}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Available</p>
@@ -48,7 +60,7 @@ export function OfferCard({ offer }) {
           <div>
             <p className="text-sm text-muted-foreground">Limits</p>
             <p className="text-base">
-              ${offer.minAmount} - ${offer.maxAmount}
+              {offer.minAmount} SUI - {offer.maxAmount} SUI
             </p>
           </div>
           <div>
@@ -68,17 +80,25 @@ export function OfferCard({ offer }) {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="pt-2">
-        <Button
-          className={
-            offer.type === "buy"
-              ? "w-full bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
-              : "w-full bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
-          }
-          onClick={() => (window.location.href = `/trade/${offer.id}`)}
-        >
-          {offer.type === "buy" ? "Buy SUI" : "Sell SUI"}
-        </Button>
+      <CardFooter className="flex flex-col pt-2">
+        <div className="flex flex-col md:flex-row gap-2 w-full">
+        <Input className="border-2 bg-cetus-dark border-cetus-border py-5 rounded-2xl" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" placeholder="Enter Amount of SUI you want to buy" />
+        <Link className="w-1/3" href={`/trade/${offer.id}`}>
+          <Button
+            className={
+              offer.type === "buy"
+                ? "bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90 w-full"
+                : "bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90 w-full"
+            }
+          >
+            {offer.type === "buy" ? "Buy SUI" : "Sell SUI"}
+          </Button>
+        </Link>
+        </div>
+        <div className="flex gap-5 items-center mt-2 w-full">
+          <p className="text-sm text-muted-foreground">You will pay: </p>
+          <p className="text-lg font-semibold">{offer.currency} {FiatAmount.toLocaleString()}</p>
+        </div>
       </CardFooter>
     </Card>
   )
