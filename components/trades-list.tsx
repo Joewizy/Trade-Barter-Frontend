@@ -4,71 +4,7 @@ import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TradeCard } from "@/components/trade-card"
 import { Clock, CheckCircle, AlertCircle } from "lucide-react"
-
-// Mock data for trades
-const mockTrades = [
-  {
-    id: "1",
-    type: "buy",
-    status: "pending",
-    price: 35000,
-    currency: "USD",
-    crypto: "SUI",
-    amount: 1000,
-    fiatAmount: 350,
-    paymentMethod: "Bank Transfer",
-    merchant: {
-      name: "CryptoTrader",
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-  },
-  {
-    id: "2",
-    type: "sell",
-    status: "completed",
-    price: 34800,
-    currency: "USD",
-    crypto: "SUI",
-    amount: 500,
-    fiatAmount: 174,
-    paymentMethod: "Bank Transfer",
-    merchant: {
-      name: "BlockchainMaster",
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    completedAt: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(), // 1 hour ago
-  },
-  {
-    id: "3",
-    type: "buy",
-    status: "disputed",
-    price: 34950,
-    currency: "USD",
-    crypto: "SUI",
-    amount: 2000,
-    fiatAmount: 699,
-    paymentMethod: "Credit Card",
-    merchant: {
-      name: "SuiWhale",
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-  },
-  {
-    id: "4",
-    type: "sell",
-    status: "payment_confirmed",
-    price: 34750,
-    currency: "USD",
-    crypto: "SUI",
-    amount: 750,
-    fiatAmount: 260.63,
-    paymentMethod: "Bank Transfer",
-    merchant: {
-      name: "P2PExchanger",
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
-  },
-]
+import { getAllOffers } from "@/lib/calls"
 
 export function TradesList() {
   const [activeTab, setActiveTab] = useState("all")
@@ -76,12 +12,43 @@ export function TradesList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setTrades(mockTrades)
-      setLoading(false)
-    }, 500)
+    async function fetchOffers() {
+      setLoading(true)
+      try {
+        let response = await getAllOffers();
+        const data = await response.json()
+  
+        // Format the offers
+        const formatted = data.map((offer) => {
+          const content = offer.content.fields
+          return {
+            id: offer.objectId,
+            type: content.trade_type, // 'buy' or 'sell'
+            status: content.status,   // 'pending', etc.
+            price: Number(content.price),
+            currency: content.currency || "USD",
+            crypto: content.crypto || "SUI",
+            amount: Number(content.crypto_amount),
+            fiatAmount: Number(content.fiat_amount),
+            paymentMethod: content.payment_method,
+            merchant: {
+              name: content.merchant_name || "Anonymous",
+            },
+            createdAt: content.created_at, // ISO string preferred
+          }
+        })
+  
+        setTrades(formatted)
+      } catch (error) {
+        console.error("Failed to fetch offers:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+  
+    fetchOffers()
   }, [])
+  
 
   const filteredTrades = trades.filter((trade) => {
     if (activeTab === "all") return true

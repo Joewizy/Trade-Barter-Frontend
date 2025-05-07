@@ -9,6 +9,9 @@ import { CreateOfferDialog } from "@/components/create-offer-dialog"
 import { OfferCard } from "@/components/offer-card"
 import { cn } from "@/lib/utils"
 import { useGlobalContext } from "@/context/global-context"
+import { getUserObjectIdsFromTable } from "@/lib/calls"
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
+import { useWallet } from "@suiet/wallet-kit"
 
 export function MarketplaceContent() {
   const [activeTab, setActiveTab] = useState("buy")
@@ -18,6 +21,11 @@ export function MarketplaceContent() {
   const [processedOffers, setProcessedOffers] = useState([])
   const { offers } = useGlobalContext()
 
+  const client = new SuiClient({
+    url: getFullnodeUrl("testnet")
+  });
+  const wallet = useWallet();
+  
   // Process the offers from the blockchain format to the format the OfferCard expects
   useEffect(() => {
     if (!offers) return
@@ -48,6 +56,44 @@ export function MarketplaceContent() {
 
     setProcessedOffers(mappedOffers)
   }, [offers])
+
+  useEffect(() => {
+    console.log(process.env.NEXT_PUBLIC_PACKAGE_ID);
+    const logUserOffersAndEscrows = async () => {
+      if (!wallet.connected || !wallet.address) return;
+  
+      try {
+        // Offer Table
+        const offerRegistry = await client.getObject({
+          id: process.env.NEXT_PUBLIC_OFFER_REGISTRY_ID as string,
+          options: { showContent: true }
+        });
+        const offerTableId = offerRegistry.data?.content?.fields?.user_offers?.fields?.id?.id;
+  
+        // Escrow Table
+        const escrowRegistry = await client.getObject({
+          id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
+          options: { showContent: true }
+        });
+        const escrowTableId = escrowRegistry.data?.content?.fields?.user_escrows?.fields?.id?.id;
+  
+        if (offerTableId) {
+          const offerIds = await getUserObjectIdsFromTable(client, offerTableId, wallet.address);
+          console.log("📦 Offer IDs:", offerIds);
+        }
+  
+        if (escrowTableId) {
+          const escrowIds = await getUserObjectIdsFromTable(client, escrowTableId, wallet.address);
+          console.log("💰 Escrow IDs:", escrowIds);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user offers/escrows:", err);
+      }
+    };
+  
+    logUserOffersAndEscrows();
+  }, [wallet.connected]);
+  
 
   const filteredOffers = processedOffers.filter((offer) => {
     // Filter by tab (buy/sell)
