@@ -20,6 +20,7 @@ import { useWallet } from "@suiet/wallet-kit"
 import { useToast } from "@/hooks/use-toast"
 import { createProfile } from "@/lib/calls"
 import { useGlobalContext } from "@/context/global-context"
+import { useRouter } from "next/navigation"
 
 const FormSchema = z.object({
   username: z.string().min(2, {
@@ -30,6 +31,7 @@ const FormSchema = z.object({
 })
 
 const CreateProfileForm = () => {
+  const router = useRouter();
   const wallet = useWallet()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -61,6 +63,9 @@ const CreateProfileForm = () => {
         title: "Success",
         description: "Profile created successfully!",
       })
+      setTimeout(() => {
+        router.push('/home')
+      }, 2000)
       setProfileCreated(true)
     } else {
       setLoading(false)

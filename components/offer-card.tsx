@@ -1,106 +1,122 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { DollarSign, CreditCard, BanknoteIcon as Bank, Wallet } from "lucide-react"
-import Link from "next/link"
-import { Input } from "./ui/input"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, CreditCard, BanknoteIcon as Bank, Wallet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { createEscrow } from "@/lib/calls";
+import { WalletContextState } from "@suiet/wallet-kit";
 
-export function OfferCard({ offer }) {
- const [amount, setAmount] = useState(0)
- const [FiatAmount, setFiatAmount] = useState(0)
+export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContextState }) {
+  const [amount, setAmount] = useState(0);
+  const [fiatAmount, setFiatAmount] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setFiatAmount(amount * offer.price)
-  }
-  ,[amount])
+    setFiatAmount(amount * offer.price);
+  }, [amount, offer.price]);
 
-
-  const paymentMethodIcons = {
+  const paymentMethodIcons: Record<string, JSX.Element> = {
     "Bank Transfer": <Bank className="h-4 w-4" />,
     "Credit Card": <CreditCard className="h-4 w-4" />,
     PayPal: <DollarSign className="h-4 w-4" />,
     Venmo: <Wallet className="h-4 w-4" />,
-  }
+  };
+
+  const handleTrade = async () => {
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid SUI amount");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await createEscrow(offer.id, amount * 1e9, wallet); // Convert to mist
+      if (response.result === true) {
+        alert("Escrow created successfully!");
+        // Optional: Navigate or trigger confirmation state
+      } else {
+        alert(`Failed to create escrow: ${response.result}`);
+      }
+    } catch (err) {
+      alert("An unexpected error occurred.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card className="cetus-card">
-      <CardHeader className="pb-2">
+      <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg font-medium">{offer.merchant.name}</CardTitle>
-            <CardDescription>
-              {offer.trades} trades | {offer.merchant.completion}% completion
-            </CardDescription>
+            <CardTitle className="text-lg font-medium truncate">{offer.owner}</CardTitle>
           </div>
           <Badge
             variant="outline"
-            className={
-              offer.type === "buy"
-                ? "bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30"
-                : "bg-cetus-accent/10 text-cetus-accent border-cetus-accent/30"
-            }
+            className="bg-cetus-primary/10 text-cetus-primary border-cetus-primary/30"
           >
-            {offer.type === "buy" ? "Buy SUI" : "Sell SUI"}
+            SUI Offer
           </Badge>
         </div>
       </CardHeader>
+
       <CardContent className="pb-2">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Price</p>
-            <p className="text-lg font-semibold">{offer.currency} {offer.price.toLocaleString()}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Available</p>
-            <p className="text-lg font-semibold">{offer.amount.toLocaleString()} SUI</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Limits</p>
-            <p className="text-base">
-              {offer.minAmount} SUI - {offer.maxAmount} SUI
+            <p className="text-lg font-semibold">
+              {offer.currencyCode} {offer.price.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Payment Methods</p>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {offer.paymentMethods.map((method) => (
-                <Badge
-                  key={method}
-                  variant="secondary"
-                  className="flex items-center gap-1 bg-cetus-dark border-cetus-border"
-                >
-                  {paymentMethodIcons[method]}
-                  <span className="text-xs">{method}</span>
-                </Badge>
-              ))}
-            </div>
+            <p className="text-sm text-muted-foreground">Available</p>
+            <p className="text-lg font-semibold">{offer.lockedAmount} SUI</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Active Escrows</p>
+            <p className="text-base">{offer.activeEscrows}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Payment Method</p>
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1 bg-cetus-dark border-cetus-border"
+            >
+              {paymentMethodIcons[offer.paymentType] || <Wallet className="h-4 w-4" />}
+              <span className="text-xs">{offer.paymentType}</span>
+            </Badge>
           </div>
         </div>
       </CardContent>
+
       <CardFooter className="flex flex-col pt-2">
         <div className="flex flex-col md:flex-row gap-2 w-full">
-        <Input className="border-2 bg-cetus-dark border-cetus-border py-5 rounded-2xl" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" placeholder="Enter Amount of SUI you want to buy" />
-        <Link className="w-1/3" href={`/trade/${offer.id}`}>
+          <Input
+            className="border-2 bg-cetus-dark border-cetus-border py-5 rounded-2xl"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            type="number"
+            placeholder="Enter SUI amount"
+          />
           <Button
-            className={
-              offer.type === "buy"
-                ? "bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90 w-full"
-                : "bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90 w-full"
-            }
+            className="w-1/3 bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
+            onClick={handleTrade}
+            disabled={loading}
           >
-            {offer.type === "buy" ? "Buy SUI" : "Sell SUI"}
+            {loading ? "Processing..." : "Trade"}
           </Button>
-        </Link>
         </div>
         <div className="flex gap-5 items-center mt-2 w-full">
           <p className="text-sm text-muted-foreground">You will pay: </p>
-          <p className="text-lg font-semibold">{offer.currency} {FiatAmount.toLocaleString()}</p>
+          <p className="text-lg font-semibold">
+            {offer.currencyCode} {fiatAmount.toLocaleString()}
+          </p>
         </div>
       </CardFooter>
     </Card>
-  )
+  );
 }
-

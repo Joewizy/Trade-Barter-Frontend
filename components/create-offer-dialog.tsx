@@ -32,21 +32,22 @@ import { callCreateOffer } from "@/lib/calls"
 
 import { currency_codes, payment_methods } from "@/data/globals"
 import CreateProfileForm from "./create-profile-form"
-import { useGlobalContext } from "@/context/global-context"
-
-const formSchema = z.object({
-  price: z.number().positive({ message: "Must be greater than zero" }),
-  amount: z.number().positive({ message: "Must be greater than zero" }),
-  currency_code: z.string().nonempty(),
-  payment_type: z.string().nonempty(),
-})
+import { useGlobalContext } from "@/context/global-context" 
+import { getAllOffers } from "@/lib/calls"
 
 export function CreateOfferDialog() {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const wallet = useWallet()
   const { toast } = useToast()
-  const { profileCreated } = useGlobalContext()
+  const { profileCreated, setOffers } = useGlobalContext()
+
+  const formSchema = z.object({
+    price: z.number().positive({ message: "Must be greater than zero" }),
+    amount: z.number().positive({ message: "Must be greater than zero" }),
+    currency_code: z.string().nonempty(),
+    payment_type: z.string().nonempty(),
+  })
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,19 +76,16 @@ export function CreateOfferDialog() {
     if (res.result === true) {
       toast({
         title: "Success!",
-        description: "Order has been created",
-      })
-      setOpen(false)
-      setIsLoading(false)
+        description: "Offer has been created",
+      });
+    
+      const latestOffers = await getAllOffers();
+      setOffers(latestOffers); 
+      setOpen(false);
+      setIsLoading(false);
       form.reset();
-    } else {
-      toast({
-        title: "Error!",
-        description: res.result,
-        variant: "destructive",
-      })
-      setIsLoading(false)
     }
+    
   }
 
   return (

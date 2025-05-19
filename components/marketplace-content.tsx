@@ -1,123 +1,59 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search } from "lucide-react"
-import { CreateOfferDialog } from "@/components/create-offer-dialog"
-import { OfferCard } from "@/components/offer-card"
-import { cn } from "@/lib/utils"
-import { useGlobalContext } from "@/context/global-context"
-import { getUserObjectIdsFromTable } from "@/lib/calls"
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
-import { useWallet } from "@suiet/wallet-kit"
+import React, { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search } from "lucide-react";
+import { CreateOfferDialog } from "@/components/create-offer-dialog";
+import { OfferCard } from "@/components/offer-card";
+import { cn } from "@/lib/utils";
+import { useGlobalContext } from "@/context/global-context";
+import { useWallet } from "@suiet/wallet-kit";
+import { getAllOffers } from "@/lib/calls";
 
 export function MarketplaceContent() {
-  const [activeTab, setActiveTab] = useState("buy")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCurrency, setSelectedCurrency] = useState("all")
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all")
-  const [processedOffers, setProcessedOffers] = useState([])
-  const { offers } = useGlobalContext()
-
-  const client = new SuiClient({
-    url: getFullnodeUrl("testnet")
-  });
+  const [activeTab, setActiveTab] = useState("buy");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState("all");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
+  const { offers, setOffers } = useGlobalContext();
   const wallet = useWallet();
-  
-  // Process the offers from the blockchain format to the format the OfferCard expects
-  useEffect(() => {
-    if (!offers) return
-
-    const mappedOffers = offers.map(offer => {
-      
-      // Determine if this is a buy or sell offer
-      // We'll consider it a "buy" offer if the user wants to sell SUI (buyer receives SUI)
-      // And a "sell" offer if the user wants to buy SUI (seller gives SUI)
-      const type = "buy" // Default to buy, you may need logic to determine buy/sell
-      
-      return {
-        id: offer.objectId,
-        type: type,
-        merchant: {
-          name: offer.content.fields.owner || "Unknown User", // The owner address or name if available
-          completion: 98 // Default completion rate - you might want to fetch this from user profile
-        },
-        trades: 0, // Default value, you may want to fetch this from user profile
-        price: offer.content.fields.price,
-        amount: parseInt(offer.content.fields.locked_amount || 0) / 1_000_000_000, // Convert MIST to normal amount
-        minAmount: 0.0001, // Default, not in contract
-        maxAmount: parseInt(offer.content.fields.locked_amount || 1000) / 1_000_000_000, // Convert MIST to normal amount
-        currency: offer.content.fields.currency_code,
-        paymentMethods: [offer.content.fields.payment_type] // Convert single payment type to array
-      }
-    })
-
-    setProcessedOffers(mappedOffers)
-  }, [offers])
 
   useEffect(() => {
-    console.log(process.env.NEXT_PUBLIC_PACKAGE_ID);
-    const logUserOffersAndEscrows = async () => {
-      if (!wallet.connected || !wallet.address) return;
-  
+    async function fetchOffers() {
       try {
-        // Offer Table
-        const offerRegistry = await client.getObject({
-          id: process.env.NEXT_PUBLIC_OFFER_REGISTRY_ID as string,
-          options: { showContent: true }
-        });
-        const offerTableId = offerRegistry.data?.content?.fields?.user_offers?.fields?.id?.id;
-  
-        // Escrow Table
-        const escrowRegistry = await client.getObject({
-          id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
-          options: { showContent: true }
-        });
-        const escrowTableId = escrowRegistry.data?.content?.fields?.user_escrows?.fields?.id?.id;
-  
-        if (offerTableId) {
-          const offerIds = await getUserObjectIdsFromTable(client, offerTableId, wallet.address);
-          console.log("📦 Offer IDs:", offerIds);
-        }
-  
-        if (escrowTableId) {
-          const escrowIds = await getUserObjectIdsFromTable(client, escrowTableId, wallet.address);
-          console.log("💰 Escrow IDs:", escrowIds);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user offers/escrows:", err);
+        const data = await getAllOffers();
+        setOffers(data);
+      } catch (error) {
+        console.error("Error fetching offers:", error);
       }
-    };
+    }
   
-    logUserOffersAndEscrows();
-  }, [wallet.connected]);
+    fetchOffers();
+  }, []);  
   
-
-  const filteredOffers = processedOffers.filter((offer) => {
-    // Filter by tab (buy/sell)
-    if (offer.type !== activeTab) return false
-
+  // Filter offers based on search query, selected currency, payment method, and tab (buy/sell)
+  const filteredOffers = offers.filter((offer) => {
+    // Filter by active tab (buy/sell)
+    if (activeTab === "buy" && offer.owner === wallet.account?.address) return false; // Exclude user's own offers in "buy" tab
+    if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false; // Include only user's offers in "sell" tab
+  
     // Filter by search query (merchant name or address)
-    if (searchQuery && !offer.merchant.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
-
-    // Filter by currency
-    if (selectedCurrency !== "all" && offer.currency !== selectedCurrency) return false
-
-    // Filter by payment method
-    if (selectedPaymentMethod !== "all" && !offer.paymentMethods.includes(selectedPaymentMethod)) return false
-
-    return true
-  })
-
-  // Get unique currencies from offers for dropdown
-  const uniqueCurrencies = [...new Set(processedOffers.map(offer => offer.currency))]
+    if (searchQuery && !offer.owner.toLowerCase().includes(searchQuery.toLowerCase())) return false;
   
-  // Get unique payment methods from offers for dropdown
-  const uniquePaymentMethods = [...new Set(
-    processedOffers.flatMap(offer => offer.paymentMethods)
-  )]
+    // Filter by currencyCode
+    if (selectedCurrency !== "all" && offer.currencyCode !== selectedCurrency) return false;
+  
+    // Filter by paymentType
+    if (selectedPaymentMethod !== "all" && offer.paymentType !== selectedPaymentMethod) return false;
+  
+    return true;
+  });
+
+  // Get unique currencies and payment methods from offers for dropdowns
+  const uniqueCurrencies = [...new Set(offers.map((offer) => offer.currencyCode))];
+  const uniquePaymentMethods = [...new Set(offers.map((offer) => offer.paymentType))];
 
   return (
     <div className="container py-8">
@@ -149,7 +85,7 @@ export function MarketplaceContent() {
                 </SelectTrigger>
                 <SelectContent className="bg-cetus-dark border-cetus-border">
                   <SelectItem value="all">All</SelectItem>
-                  {uniqueCurrencies.map(currency => (
+                  {uniqueCurrencies.map((currency) => (
                     <SelectItem key={currency} value={currency}>{currency}</SelectItem>
                   ))}
                 </SelectContent>
@@ -161,7 +97,7 @@ export function MarketplaceContent() {
                 </SelectTrigger>
                 <SelectContent className="bg-cetus-dark border-cetus-border">
                   <SelectItem value="all">All Methods</SelectItem>
-                  {uniquePaymentMethods.map(method => (
+                  {uniquePaymentMethods.map((method) => (
                     <SelectItem key={method} value={method}>{method}</SelectItem>
                   ))}
                 </SelectContent>
@@ -193,22 +129,22 @@ export function MarketplaceContent() {
               </TabsTrigger>
             </TabsList>
 
-           
+            <TabsContent value="buy" className="mt-0">
               <div className="grid gap-4">
                 {filteredOffers.length > 0 ? (
-                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
+                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} wallet={wallet} />)
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No offers found matching your criteria.</p>
                   </div>
                 )}
               </div>
-           
+            </TabsContent>
 
             <TabsContent value="sell" className="mt-0">
               <div className="grid gap-4">
                 {filteredOffers.length > 0 ? (
-                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)
+                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} wallet={wallet} />)
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No offers found matching your criteria.</p>
@@ -220,7 +156,7 @@ export function MarketplaceContent() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export default MarketplaceContent
+export default MarketplaceContent;
