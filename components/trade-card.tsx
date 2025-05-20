@@ -21,6 +21,7 @@ export function TradeCard({ trade, getStatusIcon, getStatusBadge, userAddress }:
   const isSeller = userAddress === trade.seller.address;
   const counterparty = isSeller ? trade.buyer : trade.seller;
   const currencySymbol = trade.currency === "NGN" ? "₦" : "$";
+  console.log(trade)
 
   const handleConfirmPayment = async () => {
     if (!wallet) return;

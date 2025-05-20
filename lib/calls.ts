@@ -3,6 +3,7 @@ import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { WalletContextState } from "@suiet/wallet-kit";
 import { Escrow, Offer } from "@/types/trade.types"; 
 import { Trade } from "@/types/trade.types";
+import { formatSecondsToDDMMYY } from "./helper-functions";
 
 const client = new SuiClient({
   url: getFullnodeUrl('testnet')
@@ -122,7 +123,7 @@ export async function getAllEscrows(address: string): Promise<Escrow[]> {
                     amount,
                     fiatAmount: Number(fields.fiat_amount ?? 0),
                     status: fields.status ?? "PENDING",
-                    createdAt: new Date(Number(fields.created_at ?? 0) * 1000).toISOString(),
+                    createdAt: new Date(Number(fields.created_at ?? 0)).toISOString(),
                 };
             })
             .filter((e): e is Escrow => e !== null);
@@ -654,10 +655,9 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
           offerId: escrow.offerId || "",
           seller: { address: escrow.seller || "", shortAddress: "", profile: { name: "Unknown" } },
           buyer: { address: escrow.buyer || "", shortAddress: "", profile: { name: "Unknown" } },
-          timestamp: new Date(escrow.createdAt || Date.now()).getTime(),
-          formattedDate: new Date(escrow.createdAt || Date.now()).toLocaleDateString(),
-          formattedTime: new Date(escrow.createdAt || Date.now()).toLocaleTimeString(),
-          error: true
+          timestamp: new Date(escrow.createdAt).getTime(),
+          formattedDate: formatSecondsToDDMMYY(Math.floor(new Date(escrow.createdAt).getTime() / 1000)), 
+          formattedTime: new Date(escrow.createdAt).toLocaleTimeString() 
         };
       }
     });
