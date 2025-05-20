@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradeCard } from "@/components/trade-card";
 import { Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
-import { getAllEscrowsWithDetails } from "@/lib/calls";
+import { getAllEscrows, getAllEscrowsWithDetails } from "@/lib/calls";
 import { Trade } from "@/types/trade.types";
 import { useWallet } from "@suiet/wallet-kit";
 
@@ -21,6 +21,7 @@ export function TradesList() {
       setLoading(true);
       try {
         const tradesData = await getAllEscrowsWithDetails(address);
+        console.log(`${address} escrows, ${tradesData}`)
         const sorted = tradesData.sort((a, b) => 
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );

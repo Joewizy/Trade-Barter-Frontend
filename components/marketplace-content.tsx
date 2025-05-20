@@ -33,19 +33,13 @@ export function MarketplaceContent() {
     fetchOffers();
   }, []);  
   
-  // Filter offers based on search query, selected currency, payment method, and tab (buy/sell)
   const filteredOffers = offers.filter((offer) => {
-    // Filter by active tab (buy/sell)
-    if (activeTab === "buy" && offer.owner === wallet.account?.address) return false; // Exclude user's own offers in "buy" tab
-    if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false; // Include only user's offers in "sell" tab
+    if (offer.lockedAmount === 0) return false;
+    if (activeTab === "buy" && offer.owner === wallet.account?.address) return false; 
+    if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false; 
   
-    // Filter by search query (merchant name or address)
     if (searchQuery && !offer.owner.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-  
-    // Filter by currencyCode
     if (selectedCurrency !== "all" && offer.currencyCode !== selectedCurrency) return false;
-  
-    // Filter by paymentType
     if (selectedPaymentMethod !== "all" && offer.paymentType !== selectedPaymentMethod) return false;
   
     return true;

@@ -13,28 +13,39 @@ export function TradeCard({ trade, getStatusIcon, getStatusBadge, userAddress }:
   getStatusBadge: (status: string) => JSX.Element;
   userAddress: string;
 }) {
+  const mist = 1e9
   const wallet = useWallet();
   const [isConfirming, setIsConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const isSeller = userAddress === trade.seller.address;
   const counterparty = isSeller ? trade.buyer : trade.seller;
-  const currencySymbol = trade.currency === 'NGN' ? '₦' : '$';
+  const currencySymbol = trade.currency === "NGN" ? "₦" : "$";
 
   const handleConfirmPayment = async () => {
     if (!wallet) return;
     setIsConfirming(true);
     setError(null);
-    
+
     try {
       const result = await confirmPayment(trade.id, trade.offerId, wallet);
-      if (!result.result) throw new Error('Payment confirmation failed');
-      // Optionally trigger data refresh here
+      if (!result.result) throw new Error("Payment confirmation failed");
+      // Trigger a data refresh if needed (e.g., via a callback or refetch)
     } catch (err: any) {
-      setError(err.message || 'Failed to confirm payment');
+      setError(err.message || "Failed to confirm payment");
     } finally {
       setIsConfirming(false);
     }
+  };
+
+  // Render status-specific message
+  const renderStatusMessage = () => {
+    if (trade.status === "completed") {
+      return isSeller
+        ? `You sold ${trade.fiatAmount / (trade.price * mist)} SUI to ${trade.buyer.profile.name}`
+        : `You bought ${trade.fiatAmount / (trade.price * mist)} SUI from ${trade.seller.profile.name}`;
+    }
+    return `${isSeller ? "Selling" : "Buying"} ${trade.amount.toLocaleString()} SUI`;
   };
 
   return (
@@ -45,8 +56,10 @@ export function TradeCard({ trade, getStatusIcon, getStatusBadge, userAddress }:
             <div className="mt-1">{getStatusIcon(trade.status)}</div>
             <div>
               <CardTitle className="text-lg font-medium">
-                {isSeller ? 'Selling' : 'Buying'} {trade.amount.toLocaleString()} SUI
-                <span className="text-neon-blue block sm:inline"> with {counterparty.profile.name}</span>
+                {renderStatusMessage()}
+                {trade.status !== "completed" && (
+                  <span className="text-neon-blue block sm:inline"> with {counterparty.profile.name}</span>
+                )}
               </CardTitle>
               <CardDescription className="mt-1 flex flex-col">
                 <span>{new Date(trade.createdAt).toLocaleDateString()}</span>
@@ -71,30 +84,30 @@ export function TradeCard({ trade, getStatusIcon, getStatusBadge, userAddress }:
           <div>
             <p className="text-sm text-muted-foreground">Total Value</p>
             <p className="text-lg font-semibold">
-              {currencySymbol}{(trade.fiatAmount / 100).toLocaleString(undefined, {
+              {currencySymbol}{(trade.fiatAmount / 1e9).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                maximumFractionDigits: 2,
               })}
             </p>
           </div>
           <div className="col-span-2 sm:col-span-1">
             <p className="text-sm text-muted-foreground">Payment Method</p>
             <p className="text-lg font-semibold capitalize">
-              {trade.paymentMethod.replace('-', ' ')}
+              {trade.paymentMethod.replace("-", " ")}
             </p>
           </div>
         </div>
       </CardContent>
 
       <CardFooter className="pt-2">
-        {isSeller && trade.status === 'pending' ? (
+        {trade.status === "pending" && isSeller ? (
           <div className="w-full space-y-2">
             <Button
               className="w-full bg-green-600 hover:bg-green-700"
               onClick={handleConfirmPayment}
               disabled={isConfirming}
             >
-              {isConfirming ? 'Confirming...' : 'Confirm Payment'}
+              {isConfirming ? "Confirming..." : "Confirm Payment"}
             </Button>
             {error && (
               <p className="text-red-500 text-sm text-center">{error}</p>
@@ -102,8 +115,8 @@ export function TradeCard({ trade, getStatusIcon, getStatusBadge, userAddress }:
           </div>
         ) : (
           <div className="w-full text-center text-muted-foreground text-sm">
-            {!isSeller && "Awaiting seller confirmation"}
-            {isSeller && trade.status !== 'pending' && "Transaction completed"}
+            {trade.status === "pending" && !isSeller && "Awaiting seller confirmation"}
+            {trade.status === "completed" && renderStatusMessage()}
           </div>
         )}
       </CardFooter>

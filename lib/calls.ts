@@ -46,61 +46,92 @@ export async function callCreateOffer(values: {
 
 
 export async function getAllEscrows(address: string): Promise<Escrow[]> {
-  const client = new SuiClient({ url: "https://fullnode.testnet.sui.io" }); // Adjust URL as needed
-  try {
-    // Fetch escrow registry and dynamic fields (simplified for brevity)
-    const escrowIds = ["0x38c5a57a0dc6a34f1fdc1ac38e58031a3530eaf18a831cb15018c10e09458bac"]; // Example IDs
-    const escrowObjects = await client.multiGetObjects({
-      ids: escrowIds,
-      options: { showContent: true },
+    const escrowRegistry = await client.getObject({
+        id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
+        options: { showContent: true },
     });
 
-    const escrows: Escrow[] = escrowObjects
-      .map((obj) => {
-        if (!obj.data || obj.error) {
-          console.warn(`Escrow object not found or errored: ${obj.data?.objectId}`, obj.error);
-          return null;
-        }
+    const registryFields = escrowRegistry.data?.content?.fields;
+    if (!registryFields) {
+        console.error("Escrow registry object has no content fields.");
+        return [];
+    }
 
-        const fields = obj.data.content?.fields;
-        if (!fields) {
-          console.warn(`Escrow object has no content fields: ${obj.data.objectId}`);
-          return null;
-        }
+    const userEscrowsId = registryFields.user_escrows?.fields?.id?.id;
+    if (!userEscrowsId) {
+        console.error("User escrows ID not found in registry object.");
+        return [];
+    }
 
-        // Handle locked_coin flexibly
-        let amount: number;
-        if (typeof fields.locked_coin === "string") {
-          amount = Number(fields.locked_coin); // Parse string directly
-        } else if (
-          fields.locked_coin &&
-          typeof fields.locked_coin === "object" &&
-          fields.locked_coin.fields?.value
-        ) {
-          amount = Number(fields.locked_coin.fields.value); // Parse object format
-        } else {
-          console.warn(`Invalid locked_coin format for escrow ${obj.data.objectId}`, fields);
-          return null; // Skip invalid objects
-        }
+    const tableEntries = await client.getDynamicFields({
+        parentId: userEscrowsId,
+    });
 
-        return {
-          id: obj.data.objectId,
-          offerId: fields.offer_id ?? "",
-          seller: fields.seller ?? "",
-          buyer: fields.buyer ?? "",
-          amount,
-          fiatAmount: Number(fields.fiat_amount ?? 0),
-          status: fields.status ?? "PENDING",
-          createdAt: new Date(Number(fields.created_at ?? 0)).toISOString(),
-        };
-      })
-      .filter((e): e is Escrow => e !== null);
+    const userEscrowField = tableEntries.data.find(entry => entry.name.value === address);
+    if (!userEscrowField) {
+        return [];
+    }
 
-    return escrows;
-  } catch (error) {
-    console.error("Error fetching escrows:", error);
-    return [];
-  }
+    const innerVector = await client.getDynamicFieldObject({
+        parentId: userEscrowsId,
+        name: userEscrowField.name,
+    });
+
+    const vectorValue = innerVector.data?.content?.fields?.value;
+    if (!Array.isArray(vectorValue)) {
+        console.warn("No escrow IDs found for the user.");
+        return [];
+    }
+
+    const allEscrowsIds = vectorValue as string[];
+
+    try {
+        const escrowObjects = await client.multiGetObjects({
+            ids: allEscrowsIds,
+            options: { showContent: true },
+        });
+        console.log("Escrow Objects", escrowObjects)
+        const escrows: Escrow[] = escrowObjects
+            .map((obj) => {
+                if (!obj.data || obj.error) {
+                    console.warn(`Escrow object not found or errored: ${obj.data?.objectId}`, obj.error);
+                    return null;
+                }
+
+                const fields = obj.data.content?.fields;
+                if (!fields) {
+                    console.warn(`Escrow object has no content fields: ${obj.data.objectId}`);
+                    return null;
+                }
+
+                let amount: number;
+                if (typeof fields.locked_coin === "string") {
+                    amount = Number(fields.locked_coin);
+                } else if (fields.locked_coin && typeof fields.locked_coin === "object" && fields.locked_coin.fields?.value) {
+                    amount = Number(fields.locked_coin.fields.value);
+                } else {
+                    console.warn(`Invalid locked_coin format for escrow ${obj.data.objectId}`, fields);
+                    return null;
+                }
+
+                return {
+                    id: obj.data.objectId,
+                    offerId: fields.offer_id ?? "",
+                    seller: fields.seller ?? "",
+                    buyer: fields.buyer ?? "",
+                    amount,
+                    fiatAmount: Number(fields.fiat_amount ?? 0),
+                    status: fields.status ?? "PENDING",
+                    createdAt: new Date(Number(fields.created_at ?? 0) * 1000).toISOString(),
+                };
+            })
+            .filter((e): e is Escrow => e !== null);
+
+        return escrows;
+    } catch (error) {
+        console.error("Error fetching escrows:", error);
+        return [];
+    }
 }
 
 export async function checkProfileExists(wallet: WalletContextState) {

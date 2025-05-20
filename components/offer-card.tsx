@@ -7,9 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign, CreditCard, BanknoteIcon as Bank, Wallet } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createEscrow } from "@/lib/calls";
+import { useToast } from "@/hooks/use-toast"
 import { WalletContextState } from "@suiet/wallet-kit";
+import { toBaseUnits } from "@/lib/helper-functions";
 
 export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContextState }) {
+  const { toast } = useToast()
   const [amount, setAmount] = useState(0);
   const [fiatAmount, setFiatAmount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -27,21 +30,41 @@ export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContext
 
   const handleTrade = async () => {
     if (!amount || amount <= 0) {
-      alert("Please enter a valid SUI amount");
+      toast({
+        variant: "destructive",
+        title: "Invalid amount",
+        description: "Please enter a valid SUI amount",
+      });
       return;
     }
 
+    const suiInBaseUnits = toBaseUnits(amount);
+
     try {
       setLoading(true);
-      const response = await createEscrow(offer.id, amount * 1e9, wallet); // Convert to mist
+      const response = await createEscrow(offer.id, suiInBaseUnits, wallet);
+
       if (response.result === true) {
-        alert("Escrow created successfully!");
-        // Optional: Navigate or trigger confirmation state
+        toast({
+          title: "Success",
+          description: "Escrow created successfully!",
+        });
+        setTimeout(() => {
+          // router.push("/trades"); // or whatever page
+        }, 2000);
       } else {
-        alert(`Failed to create escrow: ${response.result}`);
+        toast({
+          variant: "destructive",
+          title: "Escrow failed",
+          description: response.result || "Could not create escrow",
+        });
       }
-    } catch (err) {
-      alert("An unexpected error occurred.");
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "An unexpected error occurred.",
+      });
       console.error(err);
     } finally {
       setLoading(false);

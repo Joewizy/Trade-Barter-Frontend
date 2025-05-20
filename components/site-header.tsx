@@ -17,7 +17,7 @@ export function SiteHeader() {
             <div className="absolute inset-0 rounded-full bg-cetus-primary/20 animate-pulse"></div>
             <div className="absolute inset-1 rounded-full bg-gradient-to-r from-cetus-primary to-cetus-accent"></div>
           </div>
-          <span className="hidden font-bold sm:inline-block text-xl text-white">FURIES</span>
+          <span className="hidden font-bold sm:inline-block text-xl text-white">TRADE BARTER</span>
         </Link>
         <MainNav />
         <div className="flex items-center space-x-4">
