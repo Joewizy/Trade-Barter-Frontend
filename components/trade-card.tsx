@@ -240,7 +240,7 @@ export function TradeCard({
           <>
             <Button
               variant="outline"
-              className="w-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+              className="w-full bg-red-500 text-white hover:bg-red-700 hover:text-white"
               onClick={handleMakeDispute}
               disabled={isDisputing}
             >
