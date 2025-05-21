@@ -1,16 +1,22 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { BookOpen, Users, Menu, ArrowDownUp, Coins } from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Menu,
+  ArrowDownUp,
+  Users,
+  BookOpen,
+  Handshake
+} from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export function MainNav() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <div className="mr-4 hidden md:flex">
@@ -19,7 +25,7 @@ export function MainNav() {
           href="/marketplace"
           className={cn(
             "flex items-center gap-1 transition-colors hover:text-cetus-primary",
-            pathname === "/marketplace" ? "text-cetus-primary" : "text-white font-bold",
+            pathname === "/marketplace" ? "text-cetus-primary" : "text-white font-bold"
           )}
         >
           <ArrowDownUp className="h-4 w-4" />
@@ -29,7 +35,7 @@ export function MainNav() {
           href="/trades"
           className={cn(
             "flex items-center gap-1 transition-colors hover:text-cetus-primary",
-            pathname?.startsWith("/trades") ? "text-cetus-primary" : "text-white font-bold",
+            pathname?.startsWith("/trades") ? "text-cetus-primary" : "text-white font-bold"
           )}
         >
           <Users className="h-4 w-4" />
@@ -39,20 +45,30 @@ export function MainNav() {
           href="/learn"
           className={cn(
             "flex items-center gap-1 transition-colors hover:text-cetus-primary",
-            pathname?.startsWith("/learn") ? "text-cetus-primary" : "text-white font-bold",
+            pathname?.startsWith("/learn") ? "text-cetus-primary" : "text-white font-bold"
           )}
         >
           <BookOpen className="h-4 w-4" />
           <span>Learn & Earn</span>
         </Link>
+        <Link
+          href="/swap"
+          className={cn(
+            "flex items-center gap-1 transition-colors hover:text-cetus-primary",
+            pathname?.startsWith("/swap") ? "text-cetus-primary" : "text-white font-bold"
+          )}
+        >
+          <Handshake className="h-4 w-4" />
+          <span>Swap</span>
+        </Link>
       </nav>
     </div>
-  )
+  );
 }
 
 export function MobileNav() {
-  const pathname = usePathname()
-  const [isOpen, setIsOpen] = React.useState(false)
+  const pathname = usePathname();
+  const [isOpen, setIsOpen] = React.useState(false);
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -80,7 +96,7 @@ export function MobileNav() {
               onClick={() => setIsOpen(false)}
               className={cn(
                 "flex items-center gap-1 text-sm font-medium transition-colors",
-                pathname === "/marketplace" ? "text-cetus-primary" : "text-white font-bold",
+                pathname === "/marketplace" ? "text-cetus-primary" : "text-white font-bold"
               )}
             >
               <ArrowDownUp className="h-4 w-4" />
@@ -91,7 +107,7 @@ export function MobileNav() {
               onClick={() => setIsOpen(false)}
               className={cn(
                 "flex items-center gap-1 text-sm font-medium transition-colors",
-                pathname?.startsWith("/trades") ? "text-cetus-primary" : "text-white font-bold",
+                pathname?.startsWith("/trades") ? "text-cetus-primary" : "text-white font-bold"
               )}
             >
               <Users className="h-4 w-4" />
@@ -102,7 +118,7 @@ export function MobileNav() {
               onClick={() => setIsOpen(false)}
               className={cn(
                 "flex items-center gap-1 text-sm font-medium transition-colors",
-                pathname?.startsWith("/learn") ? "text-cetus-primary" : "text-white font-bold",
+                pathname?.startsWith("/learn") ? "text-cetus-primary" : "text-white font-bold"
               )}
             >
               <BookOpen className="h-4 w-4" />
@@ -113,16 +129,15 @@ export function MobileNav() {
               onClick={() => setIsOpen(false)}
               className={cn(
                 "flex items-center gap-1 text-sm font-medium transition-colors",
-                pathname?.startsWith("/swap") ? "text-cetus-primary" : "text-white font-bold",
+                pathname?.startsWith("/swap") ? "text-cetus-primary" : "text-white font-bold"
               )}
             >
-              <Coins className="h-4 w-4" />
+              <Handshake className="h-4 w-4" />
               <span>Swap</span>
             </Link>
           </div>
         </ScrollArea>
       </SheetContent>
     </Sheet>
-  )
+  );
 }
-

@@ -48,7 +48,6 @@ export function TradeCard({
   const adminAddress = process.env.NEXT_PUBLIC_DEPLOYER_ADDRESS;
   console.log(trade)
 
-  // ✅ Seller: Confirm Payment
   const handleConfirmPayment = async () => {
     if (!wallet) return;
     setIsConfirming(true);
@@ -63,7 +62,6 @@ export function TradeCard({
     }
   };
 
-  // ✅ Buyer: Cancel Escrow
   const handleCancelEscrow = async () => {
     if (!wallet) return;
     setIsCancelling(true);
@@ -78,7 +76,6 @@ export function TradeCard({
     }
   };
 
-  // ✅ Either: Raise Dispute
   const handleMakeDispute = async () => {
     if (!wallet) return;
     setIsDisputing(true);
@@ -93,7 +90,6 @@ export function TradeCard({
     }
   };
 
-  // ✅ Seller Only: Resolve Dispute
   const handleDisputeResolution = async () => {
     if (!wallet) return;
     if (!isSeller) {
@@ -113,7 +109,6 @@ export function TradeCard({
     }
   };
 
-  // ✅ Admin: Force Complete Trade
   const handleForceCompleteTrade = async () => {
     if (!wallet) return;
     setIsDisputing(true);
@@ -128,7 +123,6 @@ export function TradeCard({
     }
   };
 
-  // ✅ Admin: Refund Seller
   const handleRefundSeller = async () => {
     if (!wallet) return;
     setIsDisputing(true);
@@ -150,7 +144,7 @@ export function TradeCard({
         ? `You sold ${suiAmount} SUI to ${trade.buyer.profile.name}`
         : `You bought ${suiAmount} SUI from ${trade.seller.profile.name}`;
     }
-    return `${isSeller ? "Selling" : "Buying"} ${trade.amount.toLocaleString()} SUI`;
+    return `${isSeller ? "Selling" : "Buying"} ${trade.amount} SUI`;
   };
 
   return (
