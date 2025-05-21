@@ -4,46 +4,79 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradeCard } from "@/components/trade-card";
 import { Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
-import { getAllEscrows, getAllEscrowsWithDetails } from "@/lib/calls";
+import { getAllEscrowsWithDetails, getAllDisputedTrades } from "@/lib/calls";
 import { Trade } from "@/types/trade.types";
 import { useWallet } from "@suiet/wallet-kit";
 
 export function TradesList() {
   const [activeTab, setActiveTab] = useState("all");
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userTrades, setUserTrades] = useState<Trade[]>([]);
+  const [allDisputedTrades, setAllDisputedTrades] = useState<Trade[]>([]);
+  const [loadingUserTrades, setLoadingUserTrades] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { address } = useWallet();
+  const adminAddress = process.env.NEXT_PUBLIC_DEPLOYER_ADDRESS;
 
   useEffect(() => {
-    async function fetchTrades() {
-      if (!address) return;
+    if (address && adminAddress) {
+      setIsAdmin(address === adminAddress);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [address, adminAddress]);
 
-      setLoading(true);
+  useEffect(() => {
+    async function fetchUserTrades() {
+      if (!address) return;
+      setLoadingUserTrades(true);
       try {
         const tradesData = await getAllEscrowsWithDetails(address);
-        console.log(`${address} escrows, ${tradesData}`)
-        const sorted = tradesData.sort((a, b) => 
+        const sorted = tradesData.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        setTrades(sorted);
+        setUserTrades(sorted);
       } catch (error) {
-        console.error("Failed to fetch trades:", error);
+        console.error("Failed to fetch user trades:", error);
+        setUserTrades([]);
       } finally {
-        setLoading(false);
+        setLoadingUserTrades(false);
       }
     }
 
-    fetchTrades();
+    fetchUserTrades();
   }, [address]);
 
-  const filteredTrades = trades.filter((trade) => {
-    switch (activeTab) {
-      case "active": return trade.status === "pending";
-      case "completed": return trade.status === "completed";
-      case "disputed": return trade.status === "dispute";
-      default: return true;
+  useEffect(() => {
+    async function fetchAllDisputedTrades() {
+      if (!isAdmin) return;
+      try {
+        const disputedTrades = await getAllDisputedTrades();
+        setAllDisputedTrades(disputedTrades);
+      } catch (error) {
+        console.error("Failed to fetch all disputed trades:", error);
+        setAllDisputedTrades([]);
+      }
     }
-  });
+
+    fetchAllDisputedTrades();
+  }, [isAdmin]);
+
+  const filteredUserTrades = (() => {
+    if (activeTab === "disputed") {
+      return isAdmin
+        ? allDisputedTrades
+        : userTrades.filter((trade) => trade.status === "dispute");
+    }
+
+    switch (activeTab) {
+      case "active":
+        return userTrades.filter((trade) => trade.status === "pending");
+      case "completed":
+        return userTrades.filter((trade) => trade.status === "completed");
+      default:
+        return userTrades;
+    }
+  })();
 
   const getStatusIcon = (status: string) => {
     const iconConfig = {
@@ -68,7 +101,7 @@ export function TradesList() {
     return <div className={`${baseClass} ${statusClass}`}>{text}</div>;
   };
 
-  if (loading || !address) {
+  if (loadingUserTrades) {
     return (
       <div className="container py-8">
         <div className="flex flex-col space-y-8">
@@ -107,7 +140,7 @@ export function TradesList() {
             {["all", "active", "completed", "disputed"].map((tab) => (
               <TabsContent key={tab} value={tab}>
                 <TabContentPanel
-                  trades={filteredTrades}
+                  trades={filteredUserTrades}
                   emptyText={`No ${tab === "all" ? "" : tab} trades found.`}
                   getStatusIcon={getStatusIcon}
                   getStatusBadge={getStatusBadge}
@@ -127,7 +160,7 @@ function TabContentPanel({ trades, emptyText, getStatusIcon, getStatusBadge, use
   emptyText: string;
   getStatusIcon: (status: string) => JSX.Element | null;
   getStatusBadge: (status: string) => JSX.Element;
-  userAddress: string;
+  userAddress: string | undefined;
 }) {
   return (
     <div className="grid gap-4">

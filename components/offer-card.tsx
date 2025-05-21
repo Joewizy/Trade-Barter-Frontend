@@ -6,13 +6,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, CreditCard, BanknoteIcon as Bank, Wallet } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { createEscrow } from "@/lib/calls";
-import { useToast } from "@/hooks/use-toast"
+import { createEscrow, deleteOffer } from "@/lib/calls";
+import { useToast } from "@/hooks/use-toast";
 import { WalletContextState } from "@suiet/wallet-kit";
 import { toBaseUnits } from "@/lib/helper-functions";
 
-export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContextState }) {
-  const { toast } = useToast()
+export function OfferCard({ offer, profile, wallet }: { offer: any, profile: any, wallet: WalletContextState }) {
+  const { toast } = useToast();
   const [amount, setAmount] = useState(0);
   const [fiatAmount, setFiatAmount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContext
           description: "Escrow created successfully!",
         });
         setTimeout(() => {
-          // router.push("/trades"); // or whatever page
+          // router.push("/trades"); // Uncomment and adjust as needed
         }, 2000);
       } else {
         toast({
@@ -71,12 +71,23 @@ export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContext
     }
   };
 
+  const handleDeleteOffer = async (offerId: string) => {
+    if (!wallet) return;
+    try {
+      const result = await deleteOffer(offerId, wallet);
+      if (!result.result) throw new Error("Failed to delete offer");
+    } catch (err) {
+      console.log("Error deleting offer");
+    }
+  };
+
   return (
     <Card className="cetus-card">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg font-medium truncate">{offer.owner}</CardTitle>
+            <CardTitle className="text-lg font-medium">{profile?.name || "Unknown"}</CardTitle>
+            <p className="text-sm text-muted-foreground break-all">{offer.owner}</p>
           </div>
           <Badge
             variant="outline"
@@ -119,14 +130,14 @@ export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContext
       <CardFooter className="flex flex-col pt-2">
         <div className="flex flex-col md:flex-row gap-2 w-full">
           <Input
-            className="border-2 bg-cetus-dark border-cetus-border py-5 rounded-2xl"
+            className="border-2 bg-cetus-dark border-cetus-border py-5 rounded-2xl flex-1"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
             type="number"
             placeholder="Enter SUI amount"
           />
           <Button
-            className="w-1/3 bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
+            className="md:w-32 bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
             onClick={handleTrade}
             disabled={loading}
           >
@@ -139,6 +150,15 @@ export function OfferCard({ offer, wallet }: { offer: any, wallet: WalletContext
             {offer.currencyCode} {fiatAmount.toLocaleString()}
           </p>
         </div>
+        {offer.owner === wallet.account?.address && offer.activeEscrows === 0 && (
+          <Button
+            variant="destructive"
+            onClick={() => handleDeleteOffer(offer.id)}
+            className="mt-2"
+          >
+            Delete Offer
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

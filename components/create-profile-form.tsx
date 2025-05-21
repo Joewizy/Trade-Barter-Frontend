@@ -64,7 +64,7 @@ const CreateProfileForm = () => {
         description: "Profile created successfully!",
       })
       setTimeout(() => {
-        router.push('/home')
+        router.push('/')
       }, 2000)
       setProfileCreated(true)
     } else {

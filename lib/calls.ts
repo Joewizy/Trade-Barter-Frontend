@@ -45,7 +45,6 @@ export async function callCreateOffer(values: {
   }
 }
 
-
 export async function getAllEscrows(address: string): Promise<Escrow[]> {
     const escrowRegistry = await client.getObject({
         id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
@@ -136,9 +135,7 @@ export async function getAllEscrows(address: string): Promise<Escrow[]> {
 }
 
 export async function checkProfileExists(wallet: WalletContextState) {
-
   try {
-    // Query the dynamic field for the wallet address in the profiles table
     const registryObject = await client.getObject({
       id: process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string,
       options: {
@@ -148,13 +145,9 @@ export async function checkProfileExists(wallet: WalletContextState) {
 
     if (registryObject.data?.content?.fields?.user_profiles) {
       const profilesTable = registryObject.data.content.fields.user_profiles;
-
-      // Check if the address exists in the table using dynamic field apis
       const dynamicFields = await client.getDynamicFields({
         parentId: profilesTable.fields.id.id
       });
-
-      // Look for the address in the returned fields
       return { result: dynamicFields.data.some(field => field.name.value === wallet.address) }
     } else {
       console.error("Could not access profiles table in registry");
@@ -164,7 +157,6 @@ export async function checkProfileExists(wallet: WalletContextState) {
     console.error('Error checking profile:', error);
     return { result: false };
   }
-
 }
 
 export async function createProfile(values: {
@@ -173,7 +165,6 @@ export async function createProfile(values: {
   phone: string,
 }, wallet: any) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::create_user_profile`,
@@ -187,9 +178,7 @@ export async function createProfile(values: {
     await wallet.signAndExecuteTransaction({
       transaction: tx,
     });
-
     return { result: true }
-
   } catch (error: any) {
     console.log(error)
     return { result: error.message };
@@ -220,7 +209,6 @@ export async function getAllOffers(): Promise<Offer[]> {
         parentId: userOffersId,
         name: { type: "address", value: entry.name.value },
       });
-
       const vectorValue = innerVector.data?.content?.fields?.value;
       if (Array.isArray(vectorValue)) {
         offerIds.push(...vectorValue);
@@ -246,14 +234,10 @@ export async function getAllOffers(): Promise<Offer[]> {
     .map((obj) => {
       const fields = obj.data?.content?.fields;
       if (!fields) return null;
-
       try {
         console.log("Offer Structure:", JSON.stringify(fields, null, 2));
-
-        // Parse lockedAmount with full flexibility
         let lockedAmount = 0;
         const rawLockedAmount = fields.locked_amount;
-
         if (typeof rawLockedAmount === "string" || typeof rawLockedAmount === "number") {
           lockedAmount = Number(rawLockedAmount);
         } else if (typeof rawLockedAmount === "object" && rawLockedAmount !== null) {
@@ -263,10 +247,7 @@ export async function getAllOffers(): Promise<Offer[]> {
             lockedAmount = Number(rawLockedAmount.fields.value);
           }
         }
-
-        // Optional: Convert mist to SUI (comment this out if you want raw numbers)
         lockedAmount = lockedAmount / 1e9;
-
         return {
           id: obj.data.objectId,
           owner: fields.owner,
@@ -286,10 +267,8 @@ export async function getAllOffers(): Promise<Offer[]> {
   return offers;
 }
 
-
 export async function createEscrow(offerId: string, amount: number, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::create_escrow`,
@@ -312,7 +291,6 @@ export async function createEscrow(offerId: string, amount: number, wallet: Wall
 
 export async function confirmPayment(escrowId: string, offerId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::confirm_payment`,
@@ -332,10 +310,8 @@ export async function confirmPayment(escrowId: string, offerId: string, wallet: 
   }
 }
 
-// Cancel an escrow and return funds to the offer
 export async function cancelEscrow(escrowId: string, offerId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::cancel_escrow`,
@@ -354,10 +330,8 @@ export async function cancelEscrow(escrowId: string, offerId: string, wallet: Wa
   }
 }
 
-// Delete an offer if no active escrows exist
 export async function deleteOffer(offerId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::delete_offer`,
@@ -376,10 +350,8 @@ export async function deleteOffer(offerId: string, wallet: WalletContextState) {
   }
 }
 
-// Raise a dispute on an escrow
 export async function makeDispute(escrowId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::make_dispute`,
@@ -398,10 +370,8 @@ export async function makeDispute(escrowId: string, wallet: WalletContextState) 
   }
 }
 
-// Admin function to force complete a trade in dispute
 export async function forceCompleteTrade(escrowId: string, offerId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::force_complete_trade`,
@@ -422,10 +392,8 @@ export async function forceCompleteTrade(escrowId: string, offerId: string, wall
   }
 }
 
-// Admin function to refund the seller in a dispute
 export async function refundSeller(escrowId: string, offerId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::refund_seller`,
@@ -445,10 +413,8 @@ export async function refundSeller(escrowId: string, offerId: string, wallet: Wa
   }
 }
 
-// Resolve a dispute as the seller
 export async function resolveDispute(escrowId: string, wallet: WalletContextState) {
   const tx = new Transaction();
-
   try {
     tx.moveCall({
       target: `${packageObjectId}::Escrow::resolve_dispute`,
@@ -467,143 +433,88 @@ export async function resolveDispute(escrowId: string, wallet: WalletContextStat
 }
 
 // HELPER FUNCTIONS
-/**
- * Gets object IDs (like offers or escrows) associated with a wallet address from a dynamic field table.
- */
-export async function getUserObjectIdsFromTable(
-  client: SuiClient,
-  tableId: string,
-  address: string
-): Promise<string[]> {
+export async function getProfile(address: string): Promise<{
+  name: string;
+  contact: string;
+  email: string;
+  totalTrades: number;
+  completedTrades: number;
+  disputes: number;
+}> {
   try {
-    const res = await client.getDynamicFieldObject({
-      parentId: tableId,
+    const registryObj = await client.getObject({
+      id: process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string,
+      options: { showContent: true },
+    });
+
+    if (!registryObj.data?.content?.fields?.user_profiles) {
+      throw new Error("Profile registry not found");
+    }
+
+    const profilesTableId = registryObj.data.content.fields.user_profiles.fields.id.id;
+
+    const profileObj = await client.getDynamicFieldObject({
+      parentId: profilesTableId,
       name: { type: "address", value: address },
     });
 
-    const ids = res.data?.content?.fields?.value;
-    return Array.isArray(ids) ? ids : [];
-  } catch (err) {
-    console.error("Error fetching dynamic field object:", err);
-    return [];
+    const profileData = profileObj.data?.content?.fields?.value?.fields;
+    if (!profileData) {
+      throw new Error("Profile not found");
+    }
+
+    return {
+      name: profileData.name || "Unknown",
+      contact: profileData.contact || "",
+      email: profileData.email || "",
+      totalTrades: Number(profileData.total_trades || 0),
+      completedTrades: Number(profileData.completed_trades || 0),
+      disputes: Number(profileData.disputes || 0),
+    };
+  } catch (error) {
+    console.warn(`Failed to fetch profile for ${address}:`, error);
+    return {
+      name: "Unknown",
+      contact: "",
+      email: "",
+      totalTrades: 0,
+      completedTrades: 0,
+      disputes: 0,
+    };
   }
 }
 
 export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]> {
   try {
-    // Fetch user's escrows
     const escrows = await getAllEscrows(address);
     if (!escrows.length) return [];
 
-    // Map escrows to trades with additional data
     const tradePromises = escrows.map(async (escrow) => {
       try {
-        // Fetch offer details
         const offerObj = await client.getObject({
           id: escrow.offerId,
           options: { showContent: true },
         });
         const offerFields = offerObj.data?.content?.fields || {};
-
-        // Default values in case fields are missing
         const price = Number(offerFields.price || 0);
-        const currency = offerFields.currency_code || "UNKNOWN";
-        const paymentMethod = offerFields.payment_type || "UNKNOWN";
+        const currency = offerFields.currency_code || "Bank Transfer";
+        const paymentMethod = offerFields.payment_type || "Bank Transfer";
 
-        // Variables to store profile information
-        let sellerProfile = {
-          name: "Unknown Seller",
-          contact: "",
-          email: "",
-          totalTrades: 0,
-          completedTrades: 0,
-          disputes: 0
-        };
-        
-        let buyerProfile = {
-          name: "Unknown Buyer",
-          contact: "",
-          email: "",
-          totalTrades: 0,
-          completedTrades: 0,
-          disputes: 0
-        };
+        const sellerProfile = await getProfile(escrow.seller);
+        const buyerProfile = await getProfile(escrow.buyer);
 
-        // Get the profile registry object
-        try {
-          const registryObj = await client.getObject({
-            id: process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string,
-            options: { showContent: true }
-          });
-          
-          // If registry exists, try to get profiles
-          if (registryObj.data?.content?.fields?.user_profiles) {
-            const profilesTableId = registryObj.data.content.fields.user_profiles.fields.id.id;
-            
-            // Try to get seller profile
-            try {
-              const sellerProfileObj = await client.getDynamicFieldObject({
-                parentId: profilesTableId,
-                name: { type: "address", value: escrow.seller }
-              });
-              
-              const sellerProfileData = sellerProfileObj.data?.content?.fields?.value?.fields;
-              if (sellerProfileData) {
-                sellerProfile = {
-                  name: sellerProfileData.name || "Unknown Seller",
-                  contact: sellerProfileData.contact || "",
-                  email: sellerProfileData.email || "",
-                  totalTrades: Number(sellerProfileData.total_trades || 0),
-                  completedTrades: Number(sellerProfileData.completed_trades || 0),
-                  disputes: Number(sellerProfileData.disputes || 0)
-                };
-              }
-            } catch (sellerError) {
-              console.warn(`Failed to fetch seller profile for ${escrow.seller}:`, sellerError);
-            }
-            
-            // Try to get buyer profile
-            try {
-              const buyerProfileObj = await client.getDynamicFieldObject({
-                parentId: profilesTableId,
-                name: { type: "address", value: escrow.buyer }
-              });
-              
-              const buyerProfileData = buyerProfileObj.data?.content?.fields?.value?.fields;
-              if (buyerProfileData) {
-                buyerProfile = {
-                  name: buyerProfileData.name || "Unknown Buyer",
-                  contact: buyerProfileData.contact || "",
-                  email: buyerProfileData.email || "",
-                  totalTrades: Number(buyerProfileData.total_trades || 0),
-                  completedTrades: Number(buyerProfileData.completed_trades || 0),
-                  disputes: Number(buyerProfileData.disputes || 0)
-                };
-              }
-            } catch (buyerError) {
-              console.warn(`Failed to fetch buyer profile for ${escrow.buyer}:`, buyerError);
-            }
-          }
-        } catch (registryError) {
-          console.warn("Failed to fetch profile registry:", registryError);
-        }
-
-        // Format wallet addresses for display
-        const formatWalletAddress = (addr: string) => {
-          if (!addr) return "";
-          return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-        };
+        const formatWalletAddress = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
         return {
           id: escrow.id,
           type: address === escrow.seller ? 'sell' : 'buy',
           status: escrow.status.toLowerCase() as 'pending' | 'completed' | 'dispute' | 'cancelled',
-          price: price,
-          currency: currency,
+          price,
+          currency,
           crypto: 'SUI',
-          amount: escrow.amount / 1e9, // Convert from MIST to SUI
+          amount: escrow.amount / 1e9,
           fiatAmount: escrow.fiatAmount,
-          paymentMethod: paymentMethod,
+          paymentMethod,
           merchant: { 
             name: address === escrow.seller ? buyerProfile.name : sellerProfile.name,
             address: address === escrow.seller ? escrow.buyer : escrow.seller,
@@ -613,7 +524,6 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
             disputes: address === escrow.seller ? buyerProfile.disputes : sellerProfile.disputes
           },
           createdAt: escrow.createdAt,
-          // Add these fields for additional reference if needed
           offerId: escrow.offerId,
           seller: {
             address: escrow.seller,
@@ -625,14 +535,12 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
             shortAddress: formatWalletAddress(escrow.buyer),
             profile: buyerProfile
           },
-          // Additional fields for timestamps and calculations
           timestamp: new Date(escrow.createdAt).getTime(),
           formattedDate: new Date(escrow.createdAt).toLocaleDateString(),
           formattedTime: new Date(escrow.createdAt).toLocaleTimeString()
         };
       } catch (individualTradeError) {
         console.warn(`Failed to process escrow ${escrow.id}:`, individualTradeError);
-        // Return a minimal valid trade object with error indication
         return {
           id: escrow.id,
           type: address === escrow.seller ? 'sell' : 'buy',
@@ -662,11 +570,201 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
       }
     });
 
-    // Handle any promise rejections during the Promise.all
     const trades = await Promise.all(tradePromises);
     return trades;
   } catch (error) {
     console.error("Error fetching trades:", error);
+    return [];
+  }
+}
+
+export async function getAllDisputedTrades(): Promise<Trade[]> {
+  try {
+    const disputedEscrows: Escrow[] = await getAllDisputedEscrows();
+    if (!disputedEscrows.length) return [];
+
+    const tradePromises = disputedEscrows.map(async (escrow) => {
+      try {
+        const offerObj = await client.getObject({
+          id: escrow.offerId,
+          options: { showContent: true },
+        });
+        const offerFields = offerObj.data?.content?.fields || {};
+        const price = Number(offerFields.price || 0);
+        const currency = offerFields.currency_code || "UNKNOWN";
+        const paymentMethod = offerFields.payment_type || "UNKNOWN";
+
+        const sellerProfile = await getProfile(escrow.seller);
+        const buyerProfile = await getProfile(escrow.buyer);
+
+        const formatWalletAddress = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+
+        return {
+          id: escrow.id,
+          type: "dispute",
+          status: escrow.status.toLowerCase() as 'pending' | 'completed' | 'dispute' | 'cancelled',
+          price,
+          currency,
+          crypto: "SUI",
+          amount: escrow.amount / 1e9,
+          fiatAmount: escrow.fiatAmount,
+          paymentMethod,
+          merchant: {
+            name: buyerProfile.name,
+            address: escrow.buyer,
+            shortAddress: formatWalletAddress(escrow.buyer),
+            totalTrades: buyerProfile.totalTrades,
+            completedTrades: buyerProfile.completedTrades,
+            disputes: buyerProfile.disputes,
+          },
+          createdAt: escrow.createdAt,
+          offerId: escrow.offerId,
+          seller: {
+            address: escrow.seller,
+            shortAddress: formatWalletAddress(escrow.seller),
+            profile: sellerProfile,
+          },
+          buyer: {
+            address: escrow.buyer,
+            shortAddress: formatWalletAddress(escrow.buyer),
+            profile: buyerProfile,
+          },
+          timestamp: new Date(escrow.createdAt).getTime(),
+          formattedDate: new Date(escrow.createdAt).toLocaleDateString(),
+          formattedTime: new Date(escrow.createdAt).toLocaleTimeString(),
+        };
+      } catch (error) {
+        console.error(`Error processing escrow ${escrow.id}:`, error);
+        return {
+          id: escrow.id,
+          type: "dispute",
+          status: "dispute",
+          price: 0,
+          currency: "ERROR",
+          crypto: "SUI",
+          amount: escrow.amount / 1e9,
+          fiatAmount: 0,
+          paymentMethod: "Unknown",
+          merchant: {
+            name: "Error loading data",
+            address: "",
+            shortAddress: "",
+            totalTrades: 0,
+            completedTrades: 0,
+            disputes: 0,
+          },
+          createdAt: escrow.createdAt,
+          offerId: escrow.offerId,
+          seller: {
+            address: escrow.seller,
+            shortAddress: "",
+            profile: { name: "Unknown" },
+          },
+          buyer: {
+            address: escrow.buyer,
+            shortAddress: "",
+            profile: { name: "Unknown" },
+          },
+          timestamp: new Date(escrow.createdAt).getTime(),
+          formattedDate: new Date(escrow.createdAt).toLocaleDateString(),
+          formattedTime: new Date(escrow.createdAt).toLocaleTimeString(),
+        };
+      }
+    });
+
+    return Promise.all(tradePromises);
+  } catch (error) {
+    console.error("Error fetching disputed trades:", error);
+    return [];
+  }
+}
+
+export async function getAllDisputedEscrows(): Promise<Escrow[]> {
+  try {
+    const escrowRegistry = await client.getObject({
+      id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
+      options: { showContent: true },
+    });
+
+    const registryFields = escrowRegistry.data?.content?.fields;
+    if (!registryFields) {
+      console.error("Escrow registry object has no content fields.");
+      return [];
+    }
+
+    const userEscrowsTableId = registryFields.user_escrows?.fields?.id?.id;
+    if (!userEscrowsTableId) {
+      console.error("User escrows table ID not found in registry object.");
+      return [];
+    }
+
+    const tableEntries = await client.getDynamicFields({
+      parentId: userEscrowsTableId,
+    });
+
+    const allEscrowIdsSet = new Set<string>();
+
+    for (const entry of tableEntries.data) {
+      const vectorObj = await client.getDynamicFieldObject({
+        parentId: userEscrowsTableId,
+        name: entry.name,
+      });
+      const vectorValue = vectorObj.data?.content?.fields?.value;
+      if (Array.isArray(vectorValue)) {
+        vectorValue.forEach((id: string) => allEscrowIdsSet.add(id));
+      }
+    }
+
+    const allEscrowIds = Array.from(allEscrowIdsSet);
+
+    if (allEscrowIds.length === 0) {
+      console.info("No escrow IDs found in the registry.");
+      return [];
+    }
+
+    const escrowObjects = await client.multiGetObjects({
+      ids: allEscrowIds,
+      options: { showContent: true },
+    });
+
+    const disputedEscrows: Escrow[] = escrowObjects
+      .filter(obj => {
+        const fields = obj.data?.content?.fields;
+        return fields && fields.status === "DISPUTE";
+      })
+      .map(obj => {
+        const fields = obj.data?.content?.fields;
+        if (!fields) {
+          console.warn(`Escrow object has no content fields: ${obj.data?.objectId}`);
+          return null;
+        }
+
+        let amount: number;
+        if (typeof fields.locked_coin === "string") {
+          amount = Number(fields.locked_coin);
+        } else if (fields.locked_coin && typeof fields.locked_coin === "object" && fields.locked_coin.fields?.value) {
+          amount = Number(fields.locked_coin.fields.value);
+        } else {
+          console.warn(`Invalid locked_coin format for escrow ${obj.data?.objectId}`, fields);
+          return null;
+        }
+
+        return {
+          id: obj.data.objectId,
+          offerId: fields.offer_id ?? "",
+          seller: fields.seller ?? "",
+          buyer: fields.buyer ?? "",
+          amount,
+          fiatAmount: Number(fields.fiat_amount ?? 0),
+          status: fields.status ?? "PENDING",
+          createdAt: new Date(Number(fields.created_at ?? 0)).toISOString(),
+        };
+      })
+      .filter((e): e is Escrow => e !== null);
+
+    return disputedEscrows;
+  } catch (error) {
+    console.error("Error fetching disputed escrows:", error);
     return [];
   }
 }

@@ -1,37 +1,16 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useWallet } from "@suiet/wallet-kit"
-import { SiteHeader } from "@/components/site-header"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Shield, Zap, Award, ArrowDownUp } from "lucide-react"
-import CreateProfileForm from "@/components/create-profile-form"
-import { checkProfileExists } from "@/lib/calls"
+import Link from "next/link";
+import { useWallet } from "@suiet/wallet-kit";
+import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Shield, Zap, Award, ArrowDownUp } from "lucide-react";
+import CreateProfileForm from "@/components/create-profile-form";
+import { useGlobalContext } from "@/context/global-context";
 
 export default function Home() {
   const wallet = useWallet();
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [checkingProfile, setCheckingProfile] = useState(false);
-
-  useEffect(() => {
-    async function check() {
-      setCheckingProfile(true);
-      const result = await checkProfileExists(wallet);
-      if (result?.result === false) {
-        setShowCreateForm(true);
-        console.log("No profile found — showing create profile form.");
-      } else {
-        setShowCreateForm(false);
-        console.log("Profile exists.");
-      }
-      setCheckingProfile(false);
-    }
-
-    if (wallet.connected) {
-      check();
-    }
-  }, [wallet.connected]);
+  const { profileCreated } = useGlobalContext();
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -42,11 +21,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold">Connect your wallet to continue</h2>
             <p className="mt-4 text-muted-foreground">Please connect your wallet to access the platform.</p>
           </section>
-        ) : checkingProfile ? (
-          <section className="py-12 md:py-24 lg:py-32 text-center">
-            <p className="text-xl">Checking profile...</p>
-          </section>
-        ) : showCreateForm ? (
+        ) : !profileCreated ? (
           <section className="py-12 md:py-24 lg:py-32">
             <div className="container px-4 md:px-6">
               <h2 className="text-3xl font-bold mb-6">Create Your Profile</h2>
@@ -71,15 +46,16 @@ export default function Home() {
                     </div>
                     <div className="flex flex-row gap-2">
                       <Link href="/marketplace">
-                        <Button
-                          className="bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90"
-                        >
+                        <Button className="bg-gradient-to-r from-cetus-primary to-cetus-accent text-cetus-darker hover:opacity-90">
                           Trade P2P
                           <ArrowDownUp className="ml-2 h-4 w-4" />
                         </Button>
                       </Link>
                       <Link href="/swap">
-                        <Button variant="outline" className="border-cetus-border bg-cetus-dark hover:bg-cetus-dark/80 hover:border-cetus-primary/50">
+                        <Button
+                          variant="outline"
+                          className="border-cetus-border bg-cetus-dark hover:bg-cetus-dark/80 hover:border-cetus-primary/50"
+                        >
                           Start Learning
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>

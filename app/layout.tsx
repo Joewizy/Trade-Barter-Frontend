@@ -13,7 +13,7 @@ const fontSans = FontSans({
 })
 
 export const metadata: Metadata = {
-  title: "Furies P2P Exchange | Decentralized Crypto-Fiat Trading on Sui",
+  title: "TradeBarter | Decentralized Crypto-Fiat Trading on Sui",
   description:
     "A decentralized P2P platform on the Sui blockchain that enables users to exchange cryptocurrencies for fiat securely with AI-powered dispute resolution.",
 }

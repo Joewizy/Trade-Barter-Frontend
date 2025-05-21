@@ -10,7 +10,7 @@ import { OfferCard } from "@/components/offer-card";
 import { cn } from "@/lib/utils";
 import { useGlobalContext } from "@/context/global-context";
 import { useWallet } from "@suiet/wallet-kit";
-import { getAllOffers } from "@/lib/calls";
+import { getAllOffers, getProfile } from "@/lib/calls";
 
 export function MarketplaceContent() {
   const [activeTab, setActiveTab] = useState("buy");
@@ -19,33 +19,41 @@ export function MarketplaceContent() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const { offers, setOffers } = useGlobalContext();
   const wallet = useWallet();
+  const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
-    async function fetchOffers() {
+    async function fetchOffersAndProfiles() {
       try {
         const data = await getAllOffers();
         setOffers(data);
+
+        const uniqueOwners = [...new Set(data.map(offer => offer.owner))];
+
+        const profilePromises = uniqueOwners.map(async (address) => {
+          const profile = await getProfile(address);
+          return { address, ...profile };
+        });
+        const profilesData = await Promise.all(profilePromises);
+
+        const profileMap = new Map(profilesData.map(p => [p.address, p]));
+        setProfiles(profileMap);
       } catch (error) {
-        console.error("Error fetching offers:", error);
+        console.error("Error fetching offers and profiles:", error);
       }
     }
-  
-    fetchOffers();
-  }, []);  
-  
+    fetchOffersAndProfiles();
+  }, []);
+
   const filteredOffers = offers.filter((offer) => {
-    if (offer.lockedAmount === 0) return false;
-    if (activeTab === "buy" && offer.owner === wallet.account?.address) return false; 
-    if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false; 
-  
+    //if (offer.lockedAmount === 0) return false;
+    if (activeTab === "buy" && offer.owner === wallet.account?.address) return false;
+    if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false;
     if (searchQuery && !offer.owner.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedCurrency !== "all" && offer.currencyCode !== selectedCurrency) return false;
     if (selectedPaymentMethod !== "all" && offer.paymentType !== selectedPaymentMethod) return false;
-  
     return true;
   });
 
-  // Get unique currencies and payment methods from offers for dropdowns
   const uniqueCurrencies = [...new Set(offers.map((offer) => offer.currencyCode))];
   const uniquePaymentMethods = [...new Set(offers.map((offer) => offer.paymentType))];
 
@@ -107,7 +115,7 @@ export function MarketplaceContent() {
                 value="buy"
                 className={cn(
                   "rounded-md text-sm",
-                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-cetus-primary data-[state=active]:to-cetus-accent data-[state=active]:text-cetus-darker",
+                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-cetus-primary data-[state=active]:to-cetus-accent data-[state=active]:text-cetus-darker"
                 )}
               >
                 Buy SUI
@@ -116,7 +124,7 @@ export function MarketplaceContent() {
                 value="sell"
                 className={cn(
                   "rounded-md text-sm",
-                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-cetus-primary data-[state=active]:to-cetus-accent data-[state=active]:text-cetus-darker",
+                  "data-[state=active]:bg-gradient-to-r data-[state=active]:from-cetus-primary data-[state=active]:to-cetus-accent data-[state=active]:text-cetus-darker"
                 )}
               >
                 Sell SUI
@@ -126,7 +134,14 @@ export function MarketplaceContent() {
             <TabsContent value="buy" className="mt-0">
               <div className="grid gap-4">
                 {filteredOffers.length > 0 ? (
-                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} wallet={wallet} />)
+                  filteredOffers.map((offer) => (
+                    <OfferCard
+                      key={offer.id}
+                      offer={offer}
+                      profile={profiles.get(offer.owner)}
+                      wallet={wallet}
+                    />
+                  ))
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No offers found matching your criteria.</p>
@@ -138,7 +153,14 @@ export function MarketplaceContent() {
             <TabsContent value="sell" className="mt-0">
               <div className="grid gap-4">
                 {filteredOffers.length > 0 ? (
-                  filteredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} wallet={wallet} />)
+                  filteredOffers.map((offer) => (
+                    <OfferCard
+                      key={offer.id}
+                      offer={offer}
+                      profile={profiles.get(offer.owner)}
+                      wallet={wallet}
+                    />
+                  ))
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">No offers found matching your criteria.</p>
