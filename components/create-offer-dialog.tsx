@@ -29,6 +29,7 @@ import { LoaderCircleIcon, Plus } from "lucide-react"
 import { useWallet } from '@suiet/wallet-kit'
 import { useToast } from "@/hooks/use-toast"
 import { callCreateOffer } from "@/lib/calls"
+import { useRouter } from "next/navigation";
 
 import { currency_codes, payment_methods } from "@/data/globals"
 import CreateProfileForm from "./create-profile-form"
@@ -36,6 +37,7 @@ import { useGlobalContext } from "@/context/global-context"
 import { getAllOffers } from "@/lib/calls"
 
 export function CreateOfferDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const wallet = useWallet()
@@ -85,6 +87,9 @@ export function CreateOfferDialog() {
       setIsLoading(false);
       form.reset();
     }
+    setTimeout(() => {
+      router.push("/marketplace?tab=sell"); 
+    }, 2000);
     
   }
 
@@ -183,10 +188,6 @@ export function CreateOfferDialog() {
                     </FormItem>
                   )}
                 />
-
-
-
-
               </div>
               <DialogFooter>
                 <Button

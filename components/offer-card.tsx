@@ -10,12 +10,14 @@ import { createEscrow, deleteOffer } from "@/lib/calls";
 import { useToast } from "@/hooks/use-toast";
 import { WalletContextState } from "@suiet/wallet-kit";
 import { toBaseUnits } from "@/lib/helper-functions";
+import { useRouter } from "next/navigation";
 
 export function OfferCard({ offer, profile, wallet }: { offer: any, profile: any, wallet: WalletContextState }) {
   const { toast } = useToast();
   const [amount, setAmount] = useState(0);
   const [fiatAmount, setFiatAmount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setFiatAmount(amount * offer.price);
@@ -38,6 +40,15 @@ export function OfferCard({ offer, profile, wallet }: { offer: any, profile: any
       return;
     }
 
+    if (offer.owner === wallet.address) {
+      toast({
+        variant: "destructive",
+        title: "Invalid trade",
+        description: "You cannot trade with yourself.",
+      });
+      return;
+    }
+
     const suiInBaseUnits = toBaseUnits(amount);
 
     try {
@@ -49,8 +60,9 @@ export function OfferCard({ offer, profile, wallet }: { offer: any, profile: any
           title: "Success",
           description: "Escrow created successfully!",
         });
+
         setTimeout(() => {
-          // router.push("/trades"); // Uncomment and adjust as needed
+          router.push("/trades"); 
         }, 2000);
       } else {
         toast({

@@ -45,7 +45,6 @@ export function MarketplaceContent() {
   }, []);
 
   const filteredOffers = offers.filter((offer) => {
-    //if (offer.lockedAmount === 0) return false;
     if (activeTab === "buy" && offer.owner === wallet.account?.address) return false;
     if (activeTab === "sell" && offer.owner !== wallet.account?.address) return false;
     if (searchQuery && !offer.owner.toLowerCase().includes(searchQuery.toLowerCase())) return false;
