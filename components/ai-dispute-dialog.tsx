@@ -15,16 +15,27 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, Bot, Shield } from "lucide-react"
 
-export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }) {
+type Trade = {
+  id: string
+  type: "buy" | "sell"
+}
+
+type AIDisputeDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  trade: Trade | null
+  onResolve: (data: { type: string; reason: string }) => void
+}
+
+export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }: AIDisputeDialogProps) {
   const [disputeReason, setDisputeReason] = useState("")
   const [disputeType, setDisputeType] = useState("payment_not_received")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     onResolve({
@@ -35,7 +46,6 @@ export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }) {
     setIsSubmitting(false)
     onOpenChange(false)
 
-    // Reset form
     setDisputeReason("")
     setDisputeType("payment_not_received")
   }
@@ -55,6 +65,7 @@ export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }) {
               Our AI agent will help resolve your dispute. Please provide details about the issue.
             </DialogDescription>
           </DialogHeader>
+
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Dispute Type</Label>
@@ -112,6 +123,7 @@ export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }) {
               </div>
             </div>
           </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
@@ -135,4 +147,3 @@ export function AIDisputeDialog({ open, onOpenChange, trade, onResolve }) {
     </Dialog>
   )
 }
-

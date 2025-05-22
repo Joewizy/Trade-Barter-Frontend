@@ -18,10 +18,18 @@ const TradeDetails = dynamic(
         </div>
       </div>
     ),
-  },
+  }
 )
 
-export default function TradePage({ params }) {
+interface PageProps {
+  params: Promise<{
+    id: string
+  }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function TradePage({ params }: PageProps) {
+  const { id } = await params;
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -38,10 +46,9 @@ export default function TradePage({ params }) {
             </div>
           }
         >
-          <TradeDetails id={params.id} />
+          <TradeDetails id={id} />
         </Suspense>
       </main>
     </div>
-  )
+  );
 }
-

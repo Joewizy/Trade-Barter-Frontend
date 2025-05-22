@@ -1,6 +1,6 @@
 import { CheckCircle } from "lucide-react"
 
-export function ModuleContentStep({ step, module }) {
+export function ModuleContentStep({ step, module }: { step: number; module: { title: string; nftReward: { name: string } } }) {
   switch (step) {
     case 1:
       return (

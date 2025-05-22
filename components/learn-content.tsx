@@ -6,6 +6,7 @@ import { BookOpen, Award } from "lucide-react"
 import { LearnModuleDialog } from "@/components/learn-module-dialog"
 import { LearningModuleCard } from "@/components/learning-module-card"
 import { NFTRewardCard } from "@/components/nft-reward-card"
+import { NFTReward, LearningModule } from "@/types/trade.types"
 
 // Mock data for learning modules
 const mockModules = [
@@ -122,8 +123,8 @@ export function LearnContent() {
   const [activeTab, setActiveTab] = useState("modules")
   const [selectedModule, setSelectedModule] = useState(null)
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false)
-  const [modules, setModules] = useState([])
-  const [nfts, setNfts] = useState([])
+  const [modules, setModules] = useState<LearningModule[]>([])
+  const [nfts, setNfts] = useState<NFTReward[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -135,7 +136,7 @@ export function LearnContent() {
     }, 500)
   }, [])
 
-  const handleOpenModule = (module) => {
+  const handleOpenModule = (module: any) => {
     setSelectedModule(module)
     setIsModuleDialogOpen(true)
   }

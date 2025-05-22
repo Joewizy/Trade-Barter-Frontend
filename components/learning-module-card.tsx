@@ -1,11 +1,37 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { CheckCircle, Lock, ArrowRight, Gift } from "lucide-react"
 
-export function LearningModuleCard({ module, onOpenModule }) {
+type Module = {
+  id: string | number
+  title: string
+  description: string
+  duration: string
+  difficulty: string
+  progress: number
+  completed: boolean
+  locked?: boolean
+  nftReward: {
+    name: string
+  }
+}
+
+type LearningModuleCardProps = {
+  module: Module
+  onOpenModule: (module: Module) => void
+}
+
+export function LearningModuleCard({ module, onOpenModule }: LearningModuleCardProps) {
   return (
     <Card key={module.id} className={`web3-card overflow-hidden ${module.locked ? "opacity-70" : ""}`}>
       <CardHeader className="pb-2">
@@ -68,4 +94,3 @@ export function LearningModuleCard({ module, onOpenModule }) {
     </Card>
   )
 }
-

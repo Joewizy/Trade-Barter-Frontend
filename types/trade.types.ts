@@ -81,5 +81,48 @@ export interface Escrow {
     seller: string;
   }
   
+  export type LearningModule = {
+  id: string
+  title: string
+  description: string
+  duration: string
+  difficulty: string
+  progress: number
+  completed: boolean
+  locked?: boolean
+  nftReward: {
+    name: string
+    image: string
+  }
+}
 
-  
+export type NFTReward = {
+  id: string
+  name: string
+  description: string
+  image: string
+  acquired: boolean
+  date?: string
+}
+
+export interface MockTrade {
+  id: string
+  type: "buy" | "sell"
+  price: number
+  currency: string
+  crypto: string
+  amount: number
+  fiatAmount: number
+  paymentMethod: string
+  merchant: {
+    name: string
+  }
+  createdAt: string
+  status: "pending" | "completed" | "dispute" | "cancelled"
+  messages: {
+    id: string
+    sender: "user" | "system" | "merchant"
+    content: string
+    timestamp: string
+  }[]
+}

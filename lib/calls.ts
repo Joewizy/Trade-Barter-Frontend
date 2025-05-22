@@ -8,6 +8,11 @@ import { formatSecondsToDDMMYY } from "./helper-functions";
 const client = new SuiClient({
   url: getFullnodeUrl('testnet')
 });
+
+type MoveObjectContent = {
+    fields: Record<string, any>;
+};
+
 const packageObjectId = process.env.NEXT_PUBLIC_PACKAGE_ID;
 
 export async function callCreateOffer(values: {
@@ -51,7 +56,8 @@ export async function getAllEscrows(address: string): Promise<Escrow[]> {
         options: { showContent: true },
     });
 
-    const registryFields = escrowRegistry.data?.content?.fields;
+    const registryContent = escrowRegistry.data?.content as MoveObjectContent | undefined;
+    const registryFields = registryContent?.fields;
     if (!registryFields) {
         console.error("Escrow registry object has no content fields.");
         return [];
@@ -77,7 +83,8 @@ export async function getAllEscrows(address: string): Promise<Escrow[]> {
         name: userEscrowField.name,
     });
 
-    const vectorValue = innerVector.data?.content?.fields?.value;
+    const vectorContent = innerVector.data?.content as MoveObjectContent | undefined;
+    const vectorValue = vectorContent?.fields?.value;
     if (!Array.isArray(vectorValue)) {
         console.warn("No escrow IDs found for the user.");
         return [];

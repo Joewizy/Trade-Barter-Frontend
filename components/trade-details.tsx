@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TradeDetailsTab } from "@/components/trade-details-tab"
-import { TradeChatTab } from "@/components/trade-chat-tab"
-import { AIDisputeDialog } from "@/components/ai-dispute-dialog"
+import { TradeChatTab } from "./trade-chat-tab"
+import { TradeDetailsTab } from "./trade-details-tab"
+import { AIDisputeDialog } from "./ai-dispute-dialog"
 import { useMockTrade } from "@/hooks/use-mock-trade"
+import { MockTrade } from "@/types/trade.types"
 
-export function TradeDetails({ id }) {
+export function TradeDetails({ id }: { id: string }) {
   const { trade, loading, setTrade } = useMockTrade(id)
   const [activeTab, setActiveTab] = useState("details")
   const [isDisputeDialogOpen, setIsDisputeDialogOpen] = useState(false)
@@ -18,27 +19,24 @@ export function TradeDetails({ id }) {
     if (!trade || trade.status !== "pending") return
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) return 0
-        return prev - 1 / 60 // Decrease by 1 second (1/60 of a minute)
-      })
+      setTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1 / 60))
     }, 1000)
 
     return () => clearInterval(timer)
   }, [trade])
 
   useEffect(() => {
-    if (trade?.timeRemaining) {
-      setTimeLeft(trade.timeRemaining)
+    if (trade?.createdAt) {
+      setTimeLeft(0)
     }
   }, [trade])
 
   const handleConfirmPayment = () => {
     if (!trade) return
 
-    const updatedTrade = {
+    const updatedTrade: MockTrade = {
       ...trade,
-      status: "payment_confirmed",
+      status: "completed",
       messages: [
         ...trade.messages,
         {
@@ -63,6 +61,31 @@ export function TradeDetails({ id }) {
     setIsDisputeDialogOpen(true)
   }
 
+  const getStatusBadge = () => {
+    switch (trade?.status) {
+      case "pending":
+        return (
+          <div className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30 px-2 py-1 rounded-md text-sm border">
+            Awaiting Payment
+          </div>
+        )
+      case "completed":
+        return (
+          <div className="bg-green-500/10 text-green-500 border-green-500/30 px-2 py-1 rounded-md text-sm border">
+            Completed
+          </div>
+        )
+      case "dispute":
+        return (
+          <div className="bg-red-500/10 text-red-500 border-red-500/30 px-2 py-1 rounded-md text-sm border">
+            Disputed
+          </div>
+        )
+      default:
+        return <div className="px-2 py-1 rounded-md text-sm border">Unknown</div>
+    }
+  }
+
   if (loading) {
     return (
       <div className="container py-8">
@@ -79,37 +102,6 @@ export function TradeDetails({ id }) {
         <Skeleton className="h-64 w-full" />
       </div>
     )
-  }
-
-  const getStatusBadge = () => {
-    switch (trade.status) {
-      case "pending":
-        return (
-          <div className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30 px-2 py-1 rounded-md text-sm border">
-            Awaiting Payment
-          </div>
-        )
-      case "payment_confirmed":
-        return (
-          <div className="bg-blue-500/10 text-blue-500 border-blue-500/30 px-2 py-1 rounded-md text-sm border">
-            Payment Confirmed
-          </div>
-        )
-      case "completed":
-        return (
-          <div className="bg-green-500/10 text-green-500 border-green-500/30 px-2 py-1 rounded-md text-sm border">
-            Completed
-          </div>
-        )
-      case "disputed":
-        return (
-          <div className="bg-red-500/10 text-red-500 border-red-500/30 px-2 py-1 rounded-md text-sm border">
-            Disputed
-          </div>
-        )
-      default:
-        return <div className="px-2 py-1 rounded-md text-sm border">Unknown</div>
-    }
   }
 
   return (
@@ -163,9 +155,9 @@ export function TradeDetails({ id }) {
         onOpenChange={setIsDisputeDialogOpen}
         trade={trade}
         onResolve={(resolution) => {
-          const updatedTrade = {
+          const updatedTrade: MockTrade = {
             ...trade,
-            status: "disputed",
+            status: "dispute",
             messages: [
               ...trade.messages,
               {
@@ -189,6 +181,3 @@ export function TradeDetails({ id }) {
     </div>
   )
 }
-
-export default TradeDetails
-

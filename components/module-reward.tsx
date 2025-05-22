@@ -1,9 +1,25 @@
-"use client"
+'use client'
 
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 
-export function ModuleReward({ module, isCompleted, onViewContent }) {
+type ModuleType = {
+  title: string
+  nftReward?: {
+    name: string
+    image?: string
+  }
+}
+
+export function ModuleReward({
+  module,
+  isCompleted,
+  onViewContent,
+}: {
+  module: ModuleType
+  isCompleted: boolean
+  onViewContent: () => void
+}) {
   if (!module) return null
 
   return (
@@ -71,4 +87,3 @@ export function ModuleReward({ module, isCompleted, onViewContent }) {
     </div>
   )
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Dispatch, SetStateAction } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,8 +15,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Award, BookOpen, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react"
 import { ModuleContentStep } from "@/components/module-content-step"
 import { ModuleReward } from "@/components/module-reward"
+import { NFTReward } from "@/types/trade.types"
 
-export function LearnModuleDialog({ open, onOpenChange, module }) {
+type Module = {
+  title: string
+  duration: string
+  difficulty: string
+  completed?: boolean
+  progress?: number
+  nftReward: NFTReward
+}
+
+type LearnModuleDialogProps = {
+  open: boolean
+  onOpenChange: Dispatch<SetStateAction<boolean>> | ((open: boolean) => void)
+  module: Module | null
+}
+
+export function LearnModuleDialog({ open, onOpenChange, module }: LearnModuleDialogProps) {
   const [activeTab, setActiveTab] = useState("content")
   const [currentStep, setCurrentStep] = useState(1)
   const [isCompleted, setIsCompleted] = useState(module?.completed || false)
@@ -26,8 +42,9 @@ export function LearnModuleDialog({ open, onOpenChange, module }) {
 
   const handleNextStep = () => {
     if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-      const newProgress = Math.min(100, Math.round(((currentStep + 1) / totalSteps) * 100))
+      const nextStep = currentStep + 1
+      setCurrentStep(nextStep)
+      const newProgress = Math.min(100, Math.round((nextStep / totalSteps) * 100))
       setProgress(newProgress)
     } else {
       setIsCompleted(true)
@@ -168,4 +185,3 @@ export function LearnModuleDialog({ open, onOpenChange, module }) {
     </Dialog>
   )
 }
-
