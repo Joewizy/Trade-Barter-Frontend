@@ -135,15 +135,6 @@ export function TradeDetails({ id }: { id: string }) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="mt-6">
-            <TradeDetailsTab
-              trade={trade}
-              timeLeft={timeLeft}
-              onConfirmPayment={handleConfirmPayment}
-              onOpenDispute={handleOpenDispute}
-            />
-          </TabsContent>
-
           <TabsContent value="chat" className="mt-6">
             <TradeChatTab trade={trade} setTrade={setTrade} />
           </TabsContent>

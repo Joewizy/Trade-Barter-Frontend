@@ -1,28 +1,47 @@
   // ========================
   // Generic Trade UI Mapping
   // ========================
-  export interface Trade {
+export interface Trade {
     id: string;
-    type: 'buy' | 'sell';
+    type?: 'buy' | 'sell' | 'dispute';
     status: 'pending' | 'completed' | 'dispute' | 'cancelled';
     price: number;
-    currency: string; // e.g., "USD"
-    crypto: string; // e.g., "BTC", "ETH", "SUI"
-    amount: number; // Crypto amount
-    fiatAmount: number; // Fiat equivalent
-    paymentMethod: string; // e.g., "Bank Transfer"
+    currency: string;
+    crypto: string;
+    amount: number;
+    fiatAmount: number;
+    paymentMethod: string;
     merchant: {
-      name: string;
+        name: string;
+        address: string;
+        shortAddress: string;
+        totalTrades?: number;
+        completedTrades?: number; 
+        disputes?: number;       
     };
-    createdAt: string; // ISO 8601 timestamp
+    createdAt: string;
+    offerId: string;
+    seller: {
+        address: string;
+        shortAddress: string;
+        profile: Profile;        
+    };
+    buyer: {                    
+        address: string;
+        shortAddress: string;
+        profile: Profile;
+    };
+    timestamp: number;           
+    formattedDate: string;
+    formattedTime: string;
 }
 
 export interface UserProfile {
     name: string;
     contact: string;
     email: string;
-    owner: string; // Sui address
-    joinedDate: number; // Epoch timestamp in milliseconds
+    owner: string; 
+    joinedDate: number; 
     totalTrades: number;
     disputes: number;
     completedTrades: number;
@@ -125,4 +144,13 @@ export interface MockTrade {
     content: string
     timestamp: string
   }[]
+}
+
+export interface Profile {
+    name: string;
+    contact?: string;
+    email?: string;
+    totalTrades?: number;
+    completedTrades?: number;
+    disputes?: number;
 }

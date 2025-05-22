@@ -4,6 +4,7 @@ import { WalletContextState } from "@suiet/wallet-kit";
 import { Escrow, Offer } from "@/types/trade.types"; 
 import { Trade } from "@/types/trade.types";
 import { formatSecondsToDDMMYY } from "./helper-functions";
+import { Profile } from "@/types/trade.types";
 
 const client = new SuiClient({
   url: getFullnodeUrl('testnet')
@@ -50,112 +51,122 @@ export async function callCreateOffer(values: {
   }
 }
 
+/**
+ * Fetches all escrows for a given address.
+ * @param address The user's address
+ * @returns Array of Escrow objects
+ */
 export async function getAllEscrows(address: string): Promise<Escrow[]> {
-    const escrowRegistry = await client.getObject({
-        id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
-        options: { showContent: true },
+  const escrowRegistry = await client.getObject({
+    id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
+    options: { showContent: true },
+  });
+
+  const registryContent = escrowRegistry.data?.content as MoveObjectContent | undefined;
+  const registryFields = registryContent?.fields;
+  if (!registryFields) {
+    console.error("Escrow registry object has no content fields.");
+    return [];
+  }
+
+  const userEscrowsId = registryFields.user_escrows?.fields?.id?.id;
+  if (!userEscrowsId) {
+    console.error("User escrows ID not found in registry object.");
+    return [];
+  }
+
+  const tableEntries = await client.getDynamicFields({
+    parentId: userEscrowsId,
+  });
+
+  const userEscrowField = tableEntries.data.find(entry => entry.name.value === address);
+  if (!userEscrowField) {
+    return [];
+  }
+
+  const innerVector = await client.getDynamicFieldObject({
+    parentId: userEscrowsId,
+    name: userEscrowField.name,
+  });
+
+  const vectorContent = innerVector.data?.content as MoveObjectContent | undefined;
+  const vectorValue = vectorContent?.fields?.value;
+  if (!Array.isArray(vectorValue)) {
+    console.warn("No escrow IDs found for the user.");
+    return [];
+  }
+
+  const allEscrowsIds = vectorValue as string[];
+
+  try {
+    const escrowObjects = await client.multiGetObjects({
+      ids: allEscrowsIds,
+      options: { showContent: true },
     });
+    console.log("Escrow Objects", escrowObjects);
+    const escrows: Escrow[] = escrowObjects
+      .map((obj) => {
+        if (!obj.data || obj.error) {
+          console.warn(`Escrow object not found or errored: ${obj.data?.objectId}`, obj.error);
+          return null;
+        }
 
-    const registryContent = escrowRegistry.data?.content as MoveObjectContent | undefined;
-    const registryFields = registryContent?.fields;
-    if (!registryFields) {
-        console.error("Escrow registry object has no content fields.");
-        return [];
-    }
+        const content = obj.data.content as MoveObjectContent | undefined;
+        const fields = content?.fields;
+        if (!fields) {
+          console.warn(`Escrow object has no content fields: ${obj.data.objectId}`);
+          return null;
+        }
 
-    const userEscrowsId = registryFields.user_escrows?.fields?.id?.id;
-    if (!userEscrowsId) {
-        console.error("User escrows ID not found in registry object.");
-        return [];
-    }
+        let amount: number;
+        if (typeof fields.locked_coin === "string") {
+          amount = Number(fields.locked_coin);
+        } else if (fields.locked_coin && typeof fields.locked_coin === "object" && fields.locked_coin.fields?.value) {
+          amount = Number(fields.locked_coin.fields.value);
+        } else {
+          console.warn(`Invalid locked_coin format for escrow ${obj.data.objectId}`, fields);
+          return null;
+        }
 
-    const tableEntries = await client.getDynamicFields({
-        parentId: userEscrowsId,
-    });
+        return {
+          id: obj.data.objectId,
+          offerId: fields.offer_id ?? "",
+          seller: fields.seller ?? "",
+          buyer: fields.buyer ?? "",
+          amount,
+          fiatAmount: Number(fields.fiat_amount ?? 0),
+          status: fields.status ?? "PENDING",
+          createdAt: new Date(Number(fields.created_at ?? 0)).toISOString(),
+        };
+      })
+      .filter((e): e is Escrow => e !== null);
 
-    const userEscrowField = tableEntries.data.find(entry => entry.name.value === address);
-    if (!userEscrowField) {
-        return [];
-    }
-
-    const innerVector = await client.getDynamicFieldObject({
-        parentId: userEscrowsId,
-        name: userEscrowField.name,
-    });
-
-    const vectorContent = innerVector.data?.content as MoveObjectContent | undefined;
-    const vectorValue = vectorContent?.fields?.value;
-    if (!Array.isArray(vectorValue)) {
-        console.warn("No escrow IDs found for the user.");
-        return [];
-    }
-
-    const allEscrowsIds = vectorValue as string[];
-
-    try {
-        const escrowObjects = await client.multiGetObjects({
-            ids: allEscrowsIds,
-            options: { showContent: true },
-        });
-        console.log("Escrow Objects", escrowObjects)
-        const escrows: Escrow[] = escrowObjects
-            .map((obj) => {
-                if (!obj.data || obj.error) {
-                    console.warn(`Escrow object not found or errored: ${obj.data?.objectId}`, obj.error);
-                    return null;
-                }
-
-                const fields = obj.data.content?.fields;
-                if (!fields) {
-                    console.warn(`Escrow object has no content fields: ${obj.data.objectId}`);
-                    return null;
-                }
-
-                let amount: number;
-                if (typeof fields.locked_coin === "string") {
-                    amount = Number(fields.locked_coin);
-                } else if (fields.locked_coin && typeof fields.locked_coin === "object" && fields.locked_coin.fields?.value) {
-                    amount = Number(fields.locked_coin.fields.value);
-                } else {
-                    console.warn(`Invalid locked_coin format for escrow ${obj.data.objectId}`, fields);
-                    return null;
-                }
-
-                return {
-                    id: obj.data.objectId,
-                    offerId: fields.offer_id ?? "",
-                    seller: fields.seller ?? "",
-                    buyer: fields.buyer ?? "",
-                    amount,
-                    fiatAmount: Number(fields.fiat_amount ?? 0),
-                    status: fields.status ?? "PENDING",
-                    createdAt: new Date(Number(fields.created_at ?? 0)).toISOString(),
-                };
-            })
-            .filter((e): e is Escrow => e !== null);
-
-        return escrows;
-    } catch (error) {
-        console.error("Error fetching escrows:", error);
-        return [];
-    }
+    return escrows;
+  } catch (error) {
+    console.error("Error fetching escrows:", error);
+    return [];
+  }
 }
 
+/**
+ * Checks if a profile exists for the wallet's address.
+ * @param wallet Wallet context state
+ * @returns Object with result boolean
+ */
 export async function checkProfileExists(wallet: WalletContextState) {
   try {
     const registryObject = await client.getObject({
       id: process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string,
-      options: {
-        showContent: true
-      }
+      options: { showContent: true },
     });
 
-    if (registryObject.data?.content?.fields?.user_profiles) {
-      const profilesTable = registryObject.data.content.fields.user_profiles;
+    const registryContent = registryObject.data?.content as MoveObjectContent | undefined;
+    if (registryContent?.fields?.user_profiles) {
+      const profilesTable = registryContent.fields.user_profiles;
       const dynamicFields = await client.getDynamicFields({
-        parentId: profilesTable.fields.id.id
+        parentId: profilesTable.fields.id.id,
       });
-      return { result: dynamicFields.data.some(field => field.name.value === wallet.address) }
+      return { result: dynamicFields.data.some(field => field.name.value === wallet.address) };
     } else {
       console.error("Could not access profiles table in registry");
       return { result: false };
@@ -192,13 +203,18 @@ export async function createProfile(values: {
   }
 }
 
+/**
+ * Fetches all offers from the offer registry.
+ * @returns Array of Offer objects
+ */
 export async function getAllOffers(): Promise<Offer[]> {
   const offerRegistry = await client.getObject({
     id: process.env.NEXT_PUBLIC_OFFER_REGISTRY_ID as string,
     options: { showContent: true },
   });
 
-  const userOffersId = offerRegistry.data?.content?.fields?.user_offers?.fields?.id?.id;
+  const registryContent = offerRegistry.data?.content as MoveObjectContent | undefined;
+  const userOffersId = registryContent?.fields?.user_offers?.fields?.id?.id;
   if (!userOffersId) {
     console.error("User offers ID not found in registry object.");
     return [];
@@ -216,7 +232,8 @@ export async function getAllOffers(): Promise<Offer[]> {
         parentId: userOffersId,
         name: { type: "address", value: entry.name.value },
       });
-      const vectorValue = innerVector.data?.content?.fields?.value;
+      const vectorContent = innerVector.data?.content as MoveObjectContent | undefined;
+      const vectorValue = vectorContent?.fields?.value;
       if (Array.isArray(vectorValue)) {
         offerIds.push(...vectorValue);
       } else {
@@ -239,7 +256,8 @@ export async function getAllOffers(): Promise<Offer[]> {
 
   const offers: Offer[] = offerObjects
     .map((obj) => {
-      const fields = obj.data?.content?.fields;
+      const content = obj.data?.content as MoveObjectContent | undefined;
+      const fields = content?.fields;
       if (!fields) return null;
       try {
         console.log("Offer Structure:", JSON.stringify(fields, null, 2));
@@ -256,7 +274,7 @@ export async function getAllOffers(): Promise<Offer[]> {
         }
         lockedAmount = lockedAmount / 1e9;
         return {
-          id: obj.data.objectId,
+          id: obj.data?.objectId,
           owner: fields.owner,
           currencyCode: fields.currency_code,
           lockedAmount,
@@ -440,32 +458,33 @@ export async function resolveDispute(escrowId: string, wallet: WalletContextStat
 }
 
 // HELPER FUNCTIONS
-export async function getProfile(address: string): Promise<{
-  name: string;
-  contact: string;
-  email: string;
-  totalTrades: number;
-  completedTrades: number;
-  disputes: number;
-}> {
+/**
+ * Fetches a user's profile data.
+ * @param address The user's address
+ * @returns Profile data object
+ */
+export async function getProfile(address: string): Promise<Profile>{
   try {
     const registryObj = await client.getObject({
       id: process.env.NEXT_PUBLIC_PROFILE_REGISTRY_ID as string,
       options: { showContent: true },
     });
 
-    if (!registryObj.data?.content?.fields?.user_profiles) {
+    const registryContent = registryObj.data?.content as MoveObjectContent | undefined;
+    if (!registryContent?.fields?.user_profiles) {
       throw new Error("Profile registry not found");
     }
 
-    const profilesTableId = registryObj.data.content.fields.user_profiles.fields.id.id;
+    const profilesTableId = registryContent.fields.user_profiles.fields.id.id;
 
     const profileObj = await client.getDynamicFieldObject({
       parentId: profilesTableId,
       name: { type: "address", value: address },
     });
 
-    const profileData = profileObj.data?.content?.fields?.value?.fields;
+    const profileContent = profileObj.data?.content as MoveObjectContent | undefined;
+    const profileValue = profileContent?.fields.value as MoveObjectContent | undefined;
+    const profileData = profileValue?.fields;
     if (!profileData) {
       throw new Error("Profile not found");
     }
@@ -502,7 +521,8 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
           id: escrow.offerId,
           options: { showContent: true },
         });
-        const offerFields = offerObj.data?.content?.fields || {};
+        const offerContent = offerObj.data?.content as MoveObjectContent | undefined
+        const offerFields = offerContent?.fields || {}
         const price = Number(offerFields.price || 0);
         const currency = offerFields.currency_code || "Bank Transfer";
         const paymentMethod = offerFields.payment_type || "Bank Transfer";
@@ -514,7 +534,7 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
 
         return {
           id: escrow.id,
-          type: address === escrow.seller ? 'sell' : 'buy',
+          type: address === escrow.seller ? 'sell' : 'buy' as 'sell' | 'buy',
           status: escrow.status.toLowerCase() as 'pending' | 'completed' | 'dispute' | 'cancelled',
           price,
           currency,
@@ -550,7 +570,7 @@ export async function getAllEscrowsWithDetails(address: string): Promise<Trade[]
         console.warn(`Failed to process escrow ${escrow.id}:`, individualTradeError);
         return {
           id: escrow.id,
-          type: address === escrow.seller ? 'sell' : 'buy',
+          type: address === escrow.seller ? 'sell' : 'buy' as 'sell' | 'buy',
           status: 'pending' as 'pending',
           price: 0,
           currency: "ERROR",
@@ -596,19 +616,20 @@ export async function getAllDisputedTrades(): Promise<Trade[]> {
           id: escrow.offerId,
           options: { showContent: true },
         });
-        const offerFields = offerObj.data?.content?.fields || {};
+        const offerContent = offerObj.data?.content as MoveObjectContent | undefined;
+        const offerFields = offerContent?.fields || {};
         const price = Number(offerFields.price || 0);
         const currency = offerFields.currency_code || "UNKNOWN";
         const paymentMethod = offerFields.payment_type || "UNKNOWN";
 
         const sellerProfile = await getProfile(escrow.seller);
         const buyerProfile = await getProfile(escrow.buyer);
-
+      
         const formatWalletAddress = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
         return {
           id: escrow.id,
-          type: "dispute",
+          type: "dispute" as 'dispute',
           status: escrow.status.toLowerCase() as 'pending' | 'completed' | 'dispute' | 'cancelled',
           price,
           currency,
@@ -644,8 +665,8 @@ export async function getAllDisputedTrades(): Promise<Trade[]> {
         console.error(`Error processing escrow ${escrow.id}:`, error);
         return {
           id: escrow.id,
-          type: "dispute",
-          status: "dispute",
+          type: "dispute" as 'dispute',
+          status: "dispute" as 'dispute',
           price: 0,
           currency: "ERROR",
           crypto: "SUI",
@@ -692,8 +713,8 @@ export async function getAllDisputedEscrows(): Promise<Escrow[]> {
       id: process.env.NEXT_PUBLIC_ESCROW_REGISTRY_ID as string,
       options: { showContent: true },
     });
-
-    const registryFields = escrowRegistry.data?.content?.fields;
+    const registerContent = escrowRegistry.data?.content as MoveObjectContent | undefined;
+    const registryFields = registerContent?.fields;
     if (!registryFields) {
       console.error("Escrow registry object has no content fields.");
       return [];
@@ -716,7 +737,8 @@ export async function getAllDisputedEscrows(): Promise<Escrow[]> {
         parentId: userEscrowsTableId,
         name: entry.name,
       });
-      const vectorValue = vectorObj.data?.content?.fields?.value;
+      const vectorValueContent = vectorObj.data?.content as MoveObjectContent | undefined; 
+      const vectorValue = vectorValueContent?.fields.value;
       if (Array.isArray(vectorValue)) {
         vectorValue.forEach((id: string) => allEscrowIdsSet.add(id));
       }
@@ -736,11 +758,13 @@ export async function getAllDisputedEscrows(): Promise<Escrow[]> {
 
     const disputedEscrows: Escrow[] = escrowObjects
       .filter(obj => {
-        const fields = obj.data?.content?.fields;
+        const fieldContent = obj.data?.content as MoveObjectContent | undefined
+        const fields = fieldContent?.fields;
         return fields && fields.status === "DISPUTE";
       })
       .map(obj => {
-        const fields = obj.data?.content?.fields;
+        const fieldContent = obj.data?.content as MoveObjectContent | undefined
+        const fields = fieldContent?.fields;
         if (!fields) {
           console.warn(`Escrow object has no content fields: ${obj.data?.objectId}`);
           return null;
@@ -757,7 +781,7 @@ export async function getAllDisputedEscrows(): Promise<Escrow[]> {
         }
 
         return {
-          id: obj.data.objectId,
+          id: obj.data?.objectId,
           offerId: fields.offer_id ?? "",
           seller: fields.seller ?? "",
           buyer: fields.buyer ?? "",
