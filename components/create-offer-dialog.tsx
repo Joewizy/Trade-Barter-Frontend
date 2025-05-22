@@ -61,7 +61,6 @@ export function CreateOfferDialog() {
     },
   })
 
-  // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!wallet.connected) {
       toast({

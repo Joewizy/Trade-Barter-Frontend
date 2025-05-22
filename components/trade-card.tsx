@@ -19,6 +19,8 @@ import {
   refundSeller,
 } from "@/lib/calls";
 import { useWallet } from "@suiet/wallet-kit";
+import { toast, useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 export function TradeCard({
   trade,
@@ -33,6 +35,8 @@ export function TradeCard({
 }) {
   const mist = 1e9;
   const wallet = useWallet();
+  const router = useRouter();
+  const { toast } = useToast()
 
   const [isConfirming, setIsConfirming] = useState(false);
   const [isDisputing, setIsDisputing] = useState(false);
@@ -50,11 +54,29 @@ export function TradeCard({
 
   const handleConfirmPayment = async () => {
     if (!wallet) return;
+
     setIsConfirming(true);
     setError(null);
+
     try {
       const result = await confirmPayment(trade.id, trade.offerId, wallet);
-      if (!result.result) throw new Error("Payment confirmation failed");
+
+      if (result.result) {
+        toast({
+          title: "Success",
+          description: "Payment confirmed successfully!",
+        });
+
+        setTimeout(() => {
+          router.push("/trades?tab=completed");
+        }, 2000);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Could not confirm payment",
+          description: result.result || "Could not create escrow",
+        });
+      }
     } catch (err: any) {
       setError(err.message || "Failed to confirm payment");
     } finally {
@@ -66,11 +88,24 @@ export function TradeCard({
     if (!wallet) return;
     setIsCancelling(true);
     setCancelError(null);
+
     try {
       const result = await cancelEscrow(trade.id, trade.offerId, wallet);
       if (!result.result) throw new Error("Cancel failed");
+
+      toast({
+        title: "Escrow Cancelled",
+        description: "Your trade escrow was successfully cancelled.",
+      });
+
+      setTimeout(() => router.push("/trades?tab=active"), 2000);
     } catch (err: any) {
       setCancelError(err.message || "Failed to cancel escrow");
+      toast({
+        variant: "destructive",
+        title: "Cancel Failed",
+        description: err.message || "Could not cancel the escrow",
+      });
     } finally {
       setIsCancelling(false);
     }
@@ -80,11 +115,24 @@ export function TradeCard({
     if (!wallet) return;
     setIsDisputing(true);
     setDisputeError(null);
+
     try {
       const result = await makeDispute(trade.id, wallet);
       if (!result.result) throw new Error("Failed to raise dispute");
+
+      toast({
+        title: "Dispute Raised",
+        description: "Trade dispute was successfully created.",
+      });
+
+      setTimeout(() => router.push("/trades?tab=dispute"), 2000);
     } catch (err: any) {
       setDisputeError(err.message || "Failed to raise dispute");
+      toast({
+        variant: "destructive",
+        title: "Dispute Failed",
+        description: err.message || "Could not raise a dispute",
+      });
     } finally {
       setIsDisputing(false);
     }
@@ -99,11 +147,24 @@ export function TradeCard({
 
     setIsDisputing(true);
     setDisputeError(null);
+
     try {
       const result = await resolveDispute(trade.id, wallet);
       if (!result.result) throw new Error("Failed to resolve dispute");
+
+      toast({
+        title: "Dispute Resolved",
+        description: "The dispute has been resolved successfully.",
+      });
+
+      setTimeout(() => router.push("/trades?tab=completed"), 2000);
     } catch (err: any) {
       setDisputeError(err.message || "Failed to resolve dispute");
+      toast({
+        variant: "destructive",
+        title: "Resolution Failed",
+        description: err.message || "Could not resolve the dispute",
+      });
     } finally {
       setIsDisputing(false);
     }
@@ -113,11 +174,24 @@ export function TradeCard({
     if (!wallet) return;
     setIsDisputing(true);
     setDisputeError(null);
+
     try {
       const result = await forceCompleteTrade(trade.id, trade.offerId, wallet);
       if (!result.result) throw new Error("Force complete failed");
+
+      toast({
+        title: "Trade Force Completed",
+        description: "Admin has forcefully completed the trade.",
+      });
+
+      setTimeout(() => router.push("/trades?tab=completed"), 2000);
     } catch (err: any) {
       setDisputeError(err.message || "Failed to force complete trade");
+      toast({
+        variant: "destructive",
+        title: "Force Completion Failed",
+        description: err.message || "Could not force complete the trade",
+      });
     } finally {
       setIsDisputing(false);
     }
@@ -127,11 +201,24 @@ export function TradeCard({
     if (!wallet) return;
     setIsDisputing(true);
     setDisputeError(null);
+
     try {
       const result = await refundSeller(trade.id, trade.offerId, wallet);
       if (!result.result) throw new Error("Refund failed");
+
+      toast({
+        title: "Seller Refunded",
+        description: "The seller has been refunded successfully.",
+      });
+
+      setTimeout(() => router.push("/trades?tab=cancelled"), 2000);
     } catch (err: any) {
       setDisputeError(err.message || "Failed to refund seller");
+      toast({
+        variant: "destructive",
+        title: "Refund Failed",
+        description: err.message || "Could not refund seller",
+      });
     } finally {
       setIsDisputing(false);
     }
